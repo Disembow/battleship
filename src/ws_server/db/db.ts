@@ -1,3 +1,5 @@
+import { generateUserId } from '../utils/idGeneretors.js';
+
 interface IDataBase {
   roomId: number;
   roomUsers: {
@@ -14,3 +16,5 @@ interface IUser {
 export const Rooms = new Map<number, IDataBase>();
 
 export const Users = new Map<number, IUser>();
+
+console.log(Users);

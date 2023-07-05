@@ -1,5 +1,8 @@
 import { WebSocketServer } from 'ws';
-import { IRegRequest } from './types/types.js';
+import { IRegRequest, IRegRequestData } from './types/types.js';
+import { Users } from './db/db.js';
+import { LAST_USER_ID, generateUserId } from './utils/idGeneretors.js';
+import { validateAuth } from './utils/validateAuth.js';
 
 // const db = {};
 
@@ -12,17 +15,22 @@ export const ws_server = (port: number) => {
     ws.on('error', console.error);
 
     ws.on('message', async (msg) => {
-      const { type, data } = JSON.parse(msg.toString()) as IRegRequest;
+      const { type, data } = <IRegRequest>JSON.parse(msg.toString());
+      const { name, password } = <IRegRequestData>JSON.parse(data);
 
       switch (type) {
         case 'reg':
+          Users.set(generateUserId(LAST_USER_ID), { name, password });
+
+          const [error, errorText] = validateAuth(name, password);
+
           const res = JSON.stringify({
             type: 'reg',
             data: JSON.stringify({
-              name: data.name,
-              index: 0,
-              error: false,
-              errorText: '',
+              name,
+              index: LAST_USER_ID,
+              error,
+              errorText,
             }),
           });
 
@@ -34,14 +42,14 @@ export const ws_server = (port: number) => {
               JSON.stringify({
                 roomId: 5,
                 roomUsers: {
-                  name: data.name,
+                  name,
                   index: 5,
                 },
               }),
             ],
           });
 
-          ws.send(update_room);
+          if (!error) ws.send(update_room);
           break;
 
         case 'create_room':
