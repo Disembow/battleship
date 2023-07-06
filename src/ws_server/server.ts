@@ -1,7 +1,7 @@
 import { WebSocketServer } from 'ws';
 import { IRegRequest, IRegRequestData } from './types/types.js';
-import { Users } from './db/db.js';
-import { LAST_USER_ID, generateUserId } from './utils/idGeneretors.js';
+import { Rooms, Users } from './db/db.js';
+import { LAST_ROOM_ID, LAST_USER_ID, generateUserId } from './utils/idGeneretors.js';
 import { validateAuth } from './utils/validateAuth.js';
 
 // const db = {};
@@ -21,6 +21,7 @@ export const ws_server = (port: number) => {
       switch (type) {
         case 'reg':
           Users.set(generateUserId(LAST_USER_ID), { name, password });
+          console.log(Users);
 
           const [error, errorText] = validateAuth(name, password);
 
@@ -53,8 +54,22 @@ export const ws_server = (port: number) => {
           break;
 
         case 'create_room':
-          const response = [];
-          // ws.send()
+          // Rooms.set(generateUserId(LAST_ROOM_ID), {});
+
+          const update = JSON.stringify({
+            type: 'update_room',
+            data: [
+              JSON.stringify({
+                roomId: 5,
+                roomUsers: {
+                  name: Users.get(LAST_USER_ID),
+                  index: LAST_USER_ID,
+                },
+              }),
+            ],
+          });
+
+          ws.send(update);
           break;
       }
     });
