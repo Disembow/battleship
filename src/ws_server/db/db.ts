@@ -1,44 +1,43 @@
-// type TRoomUser = {
-//   name: string;
-//   index: number;
-// };
+type TRoomUser = {
+  name: string;
+  index: number;
+};
 
-// interface IRoom {
-//   roomId: number;
-//   roomUsers: TRoomUser[];
-// }
+interface IRoom {
+  roomId: number;
+  roomUsers: TRoomUser[];
+}
 
-// interface IUser {
-//   name: string;
-//   password: string;
-// }
+interface IUser {
+  name: string;
+  password: string;
+}
 
-// export const Rooms = new Map<number, IRoom>();
+class InMemoryDatabase {
+  users;
+  rooms;
+  lastUserId: number;
+  lastRoomId: number;
 
-// export let Users = new Map<number, IUser>();
-
-class DataBase {
   constructor() {
-    this.data = {};
+    this.users = new Map<number, IUser>();
+    this.rooms = new Map<number, IUser>();
+    this.lastUserId = 0;
+    this.lastRoomId = 0;
   }
 
-  insert(key, value) {
-    this.data[key] = value;
+  public setUser(key: number, value: IUser) {
+    this.users.set(key, value);
   }
 
-  get(key) {
-    return this.data[key];
+  public getUser(key: number) {
+    return this.users.get(key);
   }
 
-  delete(key) {
-    delete this.data[key];
-  }
-
-  update(key, value) {
-    if (key in this.data) {
-      this.data[key] = value;
-    }
+  public getUserId() {
+    this.lastUserId += 1;
+    return this.lastUserId;
   }
 }
 
-export default new DataBase();
+export default new InMemoryDatabase();

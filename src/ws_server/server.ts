@@ -1,10 +1,8 @@
-import { WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import { IRegRequest, IRegRequestData } from './types/types.js';
-import { Rooms, Users } from './db/db.js';
-import { LAST_ROOM_ID, LAST_USER_ID, generateUserId } from './utils/idGeneretors.js';
+import db from './db/db.js';
 import { validateAuth } from './utils/validateAuth.js';
-
-// const db = {};
+import { create } from 'domain';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
@@ -16,12 +14,14 @@ export const ws_server = (port: number) => {
 
     ws.on('message', async (msg) => {
       const { type, data } = <IRegRequest>JSON.parse(msg.toString());
-      const { name, password } = <IRegRequestData>JSON.parse(data);
 
       switch (type) {
         case 'reg':
-          Users.set(generateUserId(LAST_USER_ID), { name, password });
-          console.log(Users);
+          const { name, password } = <IRegRequestData>JSON.parse(data);
+
+          const index = db.getUserId();
+
+          db.setUser(index, { name, password });
 
           const [error, errorText] = validateAuth(name, password);
 
@@ -29,7 +29,7 @@ export const ws_server = (port: number) => {
             type: 'reg',
             data: JSON.stringify({
               name,
-              index: LAST_USER_ID,
+              index,
               error,
               errorText,
             }),
@@ -37,39 +37,55 @@ export const ws_server = (port: number) => {
 
           ws.send(res);
 
-          const update_room = JSON.stringify({
-            type: 'update_room',
-            data: [
-              JSON.stringify({
-                roomId: 5,
-                roomUsers: {
-                  name,
-                  index: 5,
-                },
-              }),
-            ],
-          });
+          console.log(db.users);
 
-          if (!error) ws.send(update_room);
+          // const update_room = JSON.stringify({
+          //   type: 'update_room',
+          //   data: [
+          //     JSON.stringify({
+          //       roomId: 1,
+          //       roomUsers: {
+          //         name,
+          //         index: 1,
+          //       },
+          //     }),
+          //   ],
+          // });
+
+          // if (!error) ws.send(update_room);
           break;
 
         case 'create_room':
-          // Rooms.set(generateUserId(LAST_ROOM_ID), {});
-
           const update = JSON.stringify({
             type: 'update_room',
-            data: [
-              JSON.stringify({
-                roomId: 5,
-                roomUsers: {
-                  name: Users.get(LAST_USER_ID),
-                  index: LAST_USER_ID,
-                },
-              }),
-            ],
+            data: JSON.stringify([
+              {
+                roomId: 1,
+                roomUsers: [
+                  {
+                    name: db.users.get(1)?.name,
+                    index: 1,
+                  },
+                ],
+              },
+            ]),
           });
 
-          ws.send(update);
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(update);
+            }
+          });
+
+          // const createdRoom = JSON.stringify({
+          //   type: 'create_game',
+          //   data: JSON.stringify({
+          //     idGame: 1,
+          //     idPlayer: 1,
+          //   }),
+          // });
+
+          // ws.send(createdRoom);
           break;
       }
     });
