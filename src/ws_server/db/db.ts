@@ -20,15 +20,14 @@ export type StartingField = {
 };
 
 type TRoomUser = {
-  name: string;
   index: number;
   ships: TShipInfo[];
 };
 
-interface IRoom {
-  roomId: number;
-  roomUsers: TRoomUser[];
-}
+// interface IRoom {
+//   // roomId: number;
+//   roomUsers: TRoomUser;
+// }
 
 interface IUser {
   index: number;
@@ -38,15 +37,11 @@ interface IUser {
 
 class InMemoryDatabase {
   users;
-  rooms;
   lastUserId: number;
-  lastRoomId: number;
 
   constructor() {
     this.users = new Map<WebSocket, IUser>();
-    this.rooms = new Map<number, IRoom>();
     this.lastUserId = 0;
-    this.lastRoomId = 0;
   }
 
   public setUser(key: WebSocket, value: IUser) {
@@ -60,11 +55,6 @@ class InMemoryDatabase {
   public getUserId() {
     this.lastUserId += 1;
     return this.lastUserId;
-  }
-
-  public getRoomId() {
-    this.lastRoomId += 1;
-    return this.lastRoomId;
   }
 }
 

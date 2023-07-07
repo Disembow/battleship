@@ -43,7 +43,8 @@ export const ws_server = (port: number) => {
             type: Commands.UpdateRoom,
             data: JSON.stringify([
               {
-                roomId: db.getRoomId(),
+                // roomId: db.getRoomId(),
+                roomId: 1, //TODO: add id generation
                 roomUsers: [
                   {
                     name: db.users.get(ws)?.name,
@@ -63,7 +64,7 @@ export const ws_server = (port: number) => {
         }
 
         case Commands.AddUserToRoom: {
-          const indexRoom = JSON.parse(data);
+          // const indexRoom = JSON.parse(data);
 
           //!TODO: add response for only to players
           wss.clients.forEach((client) => {
@@ -104,11 +105,12 @@ export const ws_server = (port: number) => {
 
           console.log(gameId, indexPlayer, ships);
 
-          // wss.clients.forEach((client) => {
-          //   if (client.readyState === WebSocket.OPEN) {
-          //     client.send(createdRoom);
-          //   }
-          // });
+          const game = {
+            gameId: gameId,
+            indexPlayer: {
+              ships,
+            },
+          };
 
           break;
       }
