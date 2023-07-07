@@ -29,13 +29,7 @@ type TRoomUser = {
 //   roomUsers: TRoomUser;
 // }
 
-interface IUser {
-  index: number;
-  name: string;
-  password: string;
-}
-
-class InMemoryDatabase {
+class Rooms {
   users;
   lastUserId: number;
 
@@ -58,4 +52,4 @@ class InMemoryDatabase {
   }
 }
 
-export default new InMemoryDatabase();
+export default new Rooms();

@@ -1,7 +1,8 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import { Commands, IRegRequest, IRegRequestData } from './types/types.js';
-import db, { StartingField } from './db/db.js';
+import Users from './db/users.js';
 import { validateAuth } from './utils/validateAuth.js';
+import { StartingField } from './db/rooms.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
@@ -18,8 +19,8 @@ export const ws_server = (port: number) => {
         case Commands.Reg: {
           const { name, password } = <IRegRequestData>JSON.parse(data);
 
-          const index = db.getUserId();
-          db.setUser(ws, { index, name, password });
+          const index = Users.getUserId();
+          Users.setUser(ws, { index, name, password });
 
           const [error, errorText] = validateAuth(name, password);
 
@@ -47,8 +48,8 @@ export const ws_server = (port: number) => {
                 roomId: 1, //TODO: add id generation
                 roomUsers: [
                   {
-                    name: db.users.get(ws)?.name,
-                    index: db.users.get(ws)?.index,
+                    name: Users.users.get(ws)?.name,
+                    index: Users.users.get(ws)?.index,
                   },
                 ],
               },
@@ -72,7 +73,7 @@ export const ws_server = (port: number) => {
               type: Commands.CreateGame,
               data: JSON.stringify({
                 idGame: 1, //TODO: update
-                idPlayer: db.users.get(client)?.index, //TODO: update
+                idPlayer: Users.users.get(client)?.index, //TODO: update
               }),
             });
 
