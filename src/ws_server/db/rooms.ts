@@ -8,7 +8,10 @@ enum ShipType {
 }
 
 type TShipInfo = {
-  position: '';
+  position: {
+    x: number;
+    y: number;
+  };
   direction: boolean;
   type: typeof ShipType;
 };
@@ -18,11 +21,6 @@ export type StartingFieldReq = {
   indexPlayer: number;
   ships: TShipInfo[];
 };
-
-// type TRoomUser = {
-//   index: number;
-//   ships: TShipInfo[];
-// };
 
 export interface IGame {
   [key: number]: {

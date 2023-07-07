@@ -4,7 +4,7 @@ import Users from './db/users.js';
 import { validateAuth } from './utils/validateAuth.js';
 import Rooms, { IGame, StartingFieldReq } from './db/rooms.js';
 import rooms from './db/rooms.js';
-import { USERS_PER_GAME } from './constamts.js';
+import { USERS_PER_GAME } from './constants.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
@@ -129,8 +129,7 @@ export const ws_server = (port: number) => {
             };
           }
 
-          const a = rooms.findGamyById(gameId);
-          console.log('User: ', indexPlayer, a);
+          console.log(ships);
           break;
       }
     });
