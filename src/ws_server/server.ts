@@ -1,11 +1,11 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import { Commands, IRegRequest, IRegRequestData } from './types/types.js';
-import db from './db/db.js';
+import db, { StartingField } from './db/db.js';
 import { validateAuth } from './utils/validateAuth.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
-    console.log(`Websocket server has been started on port ${port}...`)
+    console.log(`Websocket server has been started on port ${port}...`),
   );
 
   wss.on('connection', (ws) => {
@@ -15,15 +15,15 @@ export const ws_server = (port: number) => {
       const { type, data } = <IRegRequest>JSON.parse(msg.toString());
 
       switch (type) {
-        case Commands.Reg:
+        case Commands.Reg: {
           const { name, password } = <IRegRequestData>JSON.parse(data);
 
           const index = db.getUserId();
-          db.setUser(index, { name, password });
+          db.setUser(ws, { index, name, password });
 
           const [error, errorText] = validateAuth(name, password);
 
-          const res = JSON.stringify({
+          const response = JSON.stringify({
             type: Commands.Reg,
             data: JSON.stringify({
               name,
@@ -33,19 +33,21 @@ export const ws_server = (port: number) => {
             }),
           });
 
-          ws.send(res);
+          ws.send(response);
           break;
+        }
 
-        case Commands.CreateRoom:
-          const update = JSON.stringify({
+        case Commands.CreateRoom: {
+          //TODO: add multi rooms
+          const response = JSON.stringify({
             type: Commands.UpdateRoom,
             data: JSON.stringify([
               {
-                roomId: 1,
+                roomId: db.getRoomId(),
                 roomUsers: [
                   {
-                    name: db.users.get(1)?.name,
-                    index: 1,
+                    name: db.users.get(ws)?.name,
+                    index: db.users.get(ws)?.index,
                   },
                 ],
               },
@@ -54,25 +56,25 @@ export const ws_server = (port: number) => {
 
           wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-              client.send(update);
+              client.send(response);
             }
           });
-
           break;
+        }
 
-        case Commands.AddUserToRoom:
+        case Commands.AddUserToRoom: {
           const indexRoom = JSON.parse(data);
-
-          const createdRoom = JSON.stringify({
-            type: Commands.CreateGame,
-            data: JSON.stringify({
-              idGame: indexRoom,
-              idPlayer: 1,
-            }),
-          });
 
           //!TODO: add response for only to players
           wss.clients.forEach((client) => {
+            const createdRoom = JSON.stringify({
+              type: Commands.CreateGame,
+              data: JSON.stringify({
+                idGame: 1, //TODO: update
+                idPlayer: db.users.get(client)?.index, //TODO: update
+              }),
+            });
+
             if (client.readyState === WebSocket.OPEN) {
               client.send(createdRoom);
             }
@@ -82,8 +84,8 @@ export const ws_server = (port: number) => {
             type: Commands.UpdateRoom,
             data: JSON.stringify([
               {
-                roomId: 1,
-                roomUsers: [],
+                roomId: 0, //TODO: update
+                roomUsers: [], //TODO: delete room by id
               },
             ]),
           });
@@ -93,6 +95,21 @@ export const ws_server = (port: number) => {
               client.send(updatedAfterCreate);
             }
           });
+
+          break;
+        }
+
+        case Commands.AddShips:
+          const { gameId, indexPlayer, ships } = <StartingField>JSON.parse(data);
+
+          console.log(gameId, indexPlayer, ships);
+
+          // wss.clients.forEach((client) => {
+          //   if (client.readyState === WebSocket.OPEN) {
+          //     client.send(createdRoom);
+          //   }
+          // });
+
           break;
       }
     });
