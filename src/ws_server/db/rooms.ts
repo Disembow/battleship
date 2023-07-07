@@ -24,9 +24,11 @@ export type StartingFieldReq = {
 //   ships: TShipInfo[];
 // };
 
-interface IRoom {}
-
-interface IGame {}
+export interface IGame {
+  [key: number]: {
+    ships: TShipInfo[];
+  };
+}
 
 class Rooms {
   rooms;
@@ -35,8 +37,11 @@ class Rooms {
   lastGameId: number;
 
   constructor() {
+    // Each room contains an array of websockets
     this.rooms = new Map<number, WebSocket[]>();
+    // Each game contains an object with keys as userId & value as ship stat
     this.games = new Map<number, IGame>();
+
     this.lastRoomId = 0;
     this.lastGameId = 0;
   }
@@ -58,8 +63,14 @@ class Rooms {
     this.rooms.get(roomId)?.push(ws);
   }
 
-  public setGame(key: number, value: WebSocket): void {
-    this.rooms.set(key, [value]);
+  public setGame(gameId: number, gameState: IGame): void {
+    this.games.set(gameId, gameState);
+  }
+
+  // public addSecondUserToGame(gameId) {}
+
+  public findGamyById(gameId: number): IGame | undefined {
+    return this.games.get(gameId);
   }
 
   public getGameId(): number {

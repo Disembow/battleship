@@ -2,7 +2,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { AddUserToRoomReq, Commands, IRegRequest, IRegRequestData } from './types/types.js';
 import Users from './db/users.js';
 import { validateAuth } from './utils/validateAuth.js';
-import Rooms, { StartingFieldReq } from './db/rooms.js';
+import Rooms, { IGame, StartingFieldReq } from './db/rooms.js';
 import rooms from './db/rooms.js';
 import { USERS_PER_GAME } from './constamts.js';
 
@@ -110,22 +110,27 @@ export const ws_server = (port: number) => {
               }
             });
           }
-
           break;
         }
 
         case Commands.AddShips:
           const { gameId, indexPlayer, ships } = <StartingFieldReq>JSON.parse(data);
+          const game = rooms.findGamyById(gameId);
 
-          console.log(gameId, indexPlayer, ships);
-
-          const game = {
-            gameId: gameId,
-            indexPlayer: {
+          if (!game) {
+            const newGame = {} as IGame;
+            newGame[indexPlayer] = {
               ships,
-            },
-          };
+            };
+            rooms.setGame(gameId, newGame);
+          } else {
+            game[indexPlayer] = {
+              ships,
+            };
+          }
 
+          const a = rooms.findGamyById(gameId);
+          console.log('User: ', indexPlayer, a);
           break;
       }
     });
