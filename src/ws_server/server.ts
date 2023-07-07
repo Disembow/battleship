@@ -1,8 +1,10 @@
 import { WebSocket, WebSocketServer } from 'ws';
-import { Commands, IRegRequest, IRegRequestData } from './types/types.js';
+import { AddUserToRoomReq, Commands, IRegRequest, IRegRequestData } from './types/types.js';
 import Users from './db/users.js';
 import { validateAuth } from './utils/validateAuth.js';
-import { StartingField } from './db/rooms.js';
+import Rooms, { StartingFieldReq } from './db/rooms.js';
+import rooms from './db/rooms.js';
+import { USERS_PER_GAME } from './constamts.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
@@ -34,22 +36,27 @@ export const ws_server = (port: number) => {
             }),
           });
 
+          //TODO: add room update by user log in
+
           ws.send(response);
           break;
         }
 
         case Commands.CreateRoom: {
           //TODO: add multi rooms
+          const newRoomId = Rooms.getRoomId();
+
+          Rooms.setRoom(newRoomId, ws);
+
           const response = JSON.stringify({
             type: Commands.UpdateRoom,
             data: JSON.stringify([
               {
-                // roomId: db.getRoomId(),
-                roomId: 1, //TODO: add id generation
+                roomId: newRoomId,
                 roomUsers: [
                   {
-                    name: Users.users.get(ws)?.name,
-                    index: Users.users.get(ws)?.index,
+                    name: Users.db.get(ws)?.name,
+                    index: Users.db.get(ws)?.index,
                   },
                 ],
               },
@@ -65,44 +72,50 @@ export const ws_server = (port: number) => {
         }
 
         case Commands.AddUserToRoom: {
-          // const indexRoom = JSON.parse(data);
+          const { indexRoom } = <AddUserToRoomReq>JSON.parse(data);
+          const players = rooms.getRoom(indexRoom);
+          players?.push(ws);
 
-          //!TODO: add response for only to players
-          wss.clients.forEach((client) => {
-            const createdRoom = JSON.stringify({
-              type: Commands.CreateGame,
-              data: JSON.stringify({
-                idGame: 1, //TODO: update
-                idPlayer: Users.users.get(client)?.index, //TODO: update
-              }),
+          if (players?.length === USERS_PER_GAME) {
+            const idGame = Rooms.getGameId();
+
+            players.forEach((client) => {
+              const createdRoom = JSON.stringify({
+                type: Commands.CreateGame,
+                data: JSON.stringify({
+                  idGame,
+                  idPlayer: Users.db.get(client)?.index, //TODO: update
+                }),
+              });
+
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(createdRoom);
+              }
             });
 
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(createdRoom);
-            }
-          });
+            const updatedAfterCreate = JSON.stringify({
+              type: Commands.UpdateRoom,
+              data: JSON.stringify([
+                {
+                  //TODO: delete room by id
+                  roomId: 0,
+                  roomUsers: [],
+                },
+              ]),
+            });
 
-          const updatedAfterCreate = JSON.stringify({
-            type: Commands.UpdateRoom,
-            data: JSON.stringify([
-              {
-                roomId: 0, //TODO: update
-                roomUsers: [], //TODO: delete room by id
-              },
-            ]),
-          });
-
-          wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(updatedAfterCreate);
-            }
-          });
+            wss.clients.forEach((client) => {
+              if (client.readyState === WebSocket.OPEN) {
+                client.send(updatedAfterCreate);
+              }
+            });
+          }
 
           break;
         }
 
         case Commands.AddShips:
-          const { gameId, indexPlayer, ships } = <StartingField>JSON.parse(data);
+          const { gameId, indexPlayer, ships } = <StartingFieldReq>JSON.parse(data);
 
           console.log(gameId, indexPlayer, ships);
 

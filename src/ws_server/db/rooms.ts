@@ -13,42 +13,58 @@ type TShipInfo = {
   type: typeof ShipType;
 };
 
-export type StartingField = {
+export type StartingFieldReq = {
   gameId: number;
   indexPlayer: number;
   ships: TShipInfo[];
 };
 
-type TRoomUser = {
-  index: number;
-  ships: TShipInfo[];
-};
+// type TRoomUser = {
+//   index: number;
+//   ships: TShipInfo[];
+// };
 
-// interface IRoom {
-//   // roomId: number;
-//   roomUsers: TRoomUser;
-// }
+interface IRoom {}
+
+interface IGame {}
 
 class Rooms {
-  users;
-  lastUserId: number;
+  rooms;
+  games;
+  lastRoomId: number;
+  lastGameId: number;
 
   constructor() {
-    this.users = new Map<WebSocket, IUser>();
-    this.lastUserId = 0;
+    this.rooms = new Map<number, WebSocket[]>();
+    this.games = new Map<number, IGame>();
+    this.lastRoomId = 0;
+    this.lastGameId = 0;
   }
 
-  public setUser(key: WebSocket, value: IUser) {
-    this.users.set(key, value);
+  public setRoom(roomId: number, value: WebSocket): void {
+    this.rooms.set(roomId, [value]);
   }
 
-  public getUser(key: WebSocket) {
-    return this.users.get(key);
+  public getRoom(roomId: number): WebSocket[] | undefined {
+    return this.rooms.get(roomId);
   }
 
-  public getUserId() {
-    this.lastUserId += 1;
-    return this.lastUserId;
+  public getRoomId(): number {
+    this.lastRoomId += 1;
+    return this.lastRoomId;
+  }
+
+  public addUserToRoom(roomId: number, ws: WebSocket): void {
+    this.rooms.get(roomId)?.push(ws);
+  }
+
+  public setGame(key: number, value: WebSocket): void {
+    this.rooms.set(key, [value]);
+  }
+
+  public getGameId(): number {
+    this.lastGameId += 1;
+    return this.lastGameId;
   }
 }
 

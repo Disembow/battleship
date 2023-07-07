@@ -22,3 +22,7 @@ export interface IRegRequestData {
   name: string;
   password: string;
 }
+
+export type AddUserToRoomReq = {
+  indexRoom: number;
+};

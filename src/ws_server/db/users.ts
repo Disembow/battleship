@@ -7,20 +7,20 @@ interface IUser {
 }
 
 class Users {
-  users;
+  db;
   lastUserId: number;
 
   constructor() {
-    this.users = new Map<WebSocket, IUser>();
+    this.db = new Map<WebSocket, IUser>();
     this.lastUserId = 0;
   }
 
   public setUser(key: WebSocket, value: IUser) {
-    this.users.set(key, value);
+    this.db.set(key, value);
   }
 
   public getUser(key: WebSocket) {
-    return this.users.get(key);
+    return this.db.get(key);
   }
 
   public getUserId() {
