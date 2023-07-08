@@ -26,9 +26,10 @@ export interface IGame {
   [key: number]: {
     ships: TShipInfo[];
   };
+  ws: WebSocket[];
 }
 
-class Rooms {
+class RoomsDB {
   rooms;
   games;
   lastRoomId: number;
@@ -65,9 +66,7 @@ class Rooms {
     this.games.set(gameId, gameState);
   }
 
-  // public addSecondUserToGame(gameId) {}
-
-  public findGamyById(gameId: number): IGame | undefined {
+  public findGameById(gameId: number): IGame | undefined {
     return this.games.get(gameId);
   }
 
@@ -77,4 +76,4 @@ class Rooms {
   }
 }
 
-export default new Rooms();
+export default new RoomsDB();

@@ -2,8 +2,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { AddUserToRoomReq, Commands, IRegRequest, IRegRequestData } from './types/types.js';
 import Users from './db/users.js';
 import { validateAuth } from './utils/validateAuth.js';
-import Rooms, { IGame, StartingFieldReq } from './db/rooms.js';
-import rooms from './db/rooms.js';
+import RoomsDB, { IGame, StartingFieldReq } from './db/rooms.js';
 import { USERS_PER_GAME } from './constants.js';
 
 export const ws_server = (port: number) => {
@@ -44,9 +43,9 @@ export const ws_server = (port: number) => {
 
         case Commands.CreateRoom: {
           //TODO: add multi rooms
-          const newRoomId = Rooms.getRoomId();
+          const newRoomId = RoomsDB.getRoomId();
 
-          Rooms.setRoom(newRoomId, ws);
+          RoomsDB.setRoom(newRoomId, ws);
 
           const response = JSON.stringify({
             type: Commands.UpdateRoom,
@@ -73,11 +72,11 @@ export const ws_server = (port: number) => {
 
         case Commands.AddUserToRoom: {
           const { indexRoom } = <AddUserToRoomReq>JSON.parse(data);
-          const players = rooms.getRoom(indexRoom);
+          const players = RoomsDB.getRoom(indexRoom);
           players?.push(ws);
 
           if (players?.length === USERS_PER_GAME) {
-            const idGame = Rooms.getGameId();
+            const idGame = RoomsDB.getGameId();
 
             players.forEach((client) => {
               const createdRoom = JSON.stringify({
@@ -115,21 +114,39 @@ export const ws_server = (port: number) => {
 
         case Commands.AddShips:
           const { gameId, indexPlayer, ships } = <StartingFieldReq>JSON.parse(data);
-          const game = rooms.findGamyById(gameId);
+          const game = RoomsDB.findGameById(gameId);
 
+          // Fill the initial game state on add_ships event
           if (!game) {
-            const newGame = {} as IGame;
+            const newGame = { ws: [ws] } as IGame;
             newGame[indexPlayer] = {
               ships,
             };
-            rooms.setGame(gameId, newGame);
+            RoomsDB.setGame(gameId, newGame);
           } else {
             game[indexPlayer] = {
               ships,
             };
+            game.ws.push(ws);
           }
 
-          console.log(ships);
+          // Send message to players with their initial state
+          if (game?.ws.length === USERS_PER_GAME) {
+            game.ws.forEach((client) => {
+              const userId = Users.getUser(client)?.index!;
+
+              const startState = JSON.stringify({
+                type: Commands.StartGame,
+                data: game[userId].ships,
+                currentPlayerIndex: userId,
+              });
+
+              client.send(startState);
+
+              // client.send(turn);
+            });
+          }
+
           break;
       }
     });
