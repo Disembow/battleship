@@ -1,4 +1,5 @@
 import { WebSocket } from 'ws';
+import { AttackStatus } from '../types/types.js';
 
 enum ShipType {
   Small = 'small',
@@ -6,6 +7,8 @@ enum ShipType {
   Large = 'large',
   Huge = 'huge',
 }
+
+type TShips = Array<Array<string>>;
 
 export type TShipInfo = {
   position: {
@@ -26,7 +29,11 @@ export interface IGame {
   turn: number;
 }
 
-class RoomsDB {
+interface IRoomDB {
+  shot(target: string, init: TShips, killed: TShips): AttackStatus;
+}
+
+class RoomsDB implements IRoomDB {
   private rooms;
   private games;
   private lastRoomId: number;
@@ -55,10 +62,6 @@ class RoomsDB {
     return this.lastRoomId;
   }
 
-  // public addUserToRoom(roomId: number, ws: WebSocket): void {
-  //   this.rooms.get(roomId)?.push(ws);
-  // }
-
   public setGame(gameId: number, gameState: IGame): void {
     this.games.set(gameId, gameState);
   }
@@ -77,6 +80,30 @@ class RoomsDB {
   }
 
   public changeTurnByRoomId(id: number) {}
+
+  public shot(target: string, init: TShips, killed: TShips) {
+    let result = AttackStatus.Miss;
+
+    init.forEach((ship, shipIndex) => {
+      ship.forEach((coord, coordIndex) => {
+        if (coord === target) {
+          killed[shipIndex][coordIndex] = target;
+          result = AttackStatus.Shot;
+        }
+
+        init.forEach((e, i) => {
+          if (JSON.stringify(e) === JSON.stringify(killed[i])) {
+            init.splice(i, 1);
+            killed.splice(i, 1);
+
+            result = AttackStatus.Killed;
+          }
+        });
+      });
+    });
+
+    return result;
+  }
 }
 
 export default new RoomsDB();
