@@ -224,7 +224,18 @@ export const ws_server = (port: number) => {
                 });
               }
 
-              e.send(nextTurn);
+              if (shipsCoords.length === 0) {
+                const finishGame = JSON.stringify({
+                  type: Commands.Finish,
+                  data: JSON.stringify({
+                    winPlayer: indexPlayer,
+                  }),
+                });
+
+                e.send(finishGame);
+              } else {
+                e.send(nextTurn);
+              }
             });
           }
 
