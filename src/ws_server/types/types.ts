@@ -35,15 +35,6 @@ export type StartingFieldReq = {
   ships: TShipInfo[];
 };
 
-export interface IGame {
-  [key: number]: {
-    ships: TShipInfo[];
-  };
-  ws: WebSocket[];
-  ids: number[];
-  turn: number;
-}
-
 export type Attack = Pick<StartingFieldReq, 'gameId' | 'indexPlayer'> & { x: number; y: number };
 
 export enum AttackStatus {

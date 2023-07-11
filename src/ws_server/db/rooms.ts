@@ -1,9 +1,20 @@
 import { WebSocket } from 'ws';
-import { AttackStatus, IGame, TShipInfo, TShipsCoords } from '../types/types.js';
+import { AttackStatus, TShipInfo, TShipsCoords } from '../types/types.js';
+
+export interface IGame {
+  [key: number]: {
+    ships: TShipInfo[];
+    shipsCoords: TShipsCoords;
+    killed: TShipsCoords;
+  };
+  ws: WebSocket[];
+  ids: number[];
+  turn: number;
+}
 
 interface IRoomDB {
   shot(target: string, init: TShipsCoords, killed: TShipsCoords): AttackStatus;
-  setInitialShipState(arr: TShipInfo[]): TShipsCoords;
+  createInitialShipState(arr: TShipInfo[]): TShipsCoords;
 }
 
 class RoomsDB implements IRoomDB {
@@ -52,21 +63,19 @@ class RoomsDB implements IRoomDB {
     return Math.round(Math.random());
   }
 
-  public changeTurnByRoomId(id: number) {}
-
-  public shot(target: string, init: TShipsCoords, killed: TShipsCoords) {
+  public shot(target: string, shipsCoords: TShipsCoords, killed: TShipsCoords) {
     let result = AttackStatus.Miss;
 
-    init.forEach((ship, shipIndex) => {
+    shipsCoords.forEach((ship, shipIndex) => {
       ship.forEach((coord, coordIndex) => {
         if (coord === target) {
           killed[shipIndex][coordIndex] = target;
           result = AttackStatus.Shot;
         }
 
-        init.forEach((e, i) => {
+        shipsCoords.forEach((e, i) => {
           if (JSON.stringify(e) === JSON.stringify(killed[i])) {
-            init.splice(i, 1);
+            shipsCoords.splice(i, 1);
             killed.splice(i, 1);
 
             result = AttackStatus.Killed;
@@ -78,7 +87,7 @@ class RoomsDB implements IRoomDB {
     return result;
   }
 
-  public setInitialShipState(arr: TShipInfo[]) {
+  public createInitialShipState(arr: TShipInfo[]) {
     const status: TShipsCoords = [];
 
     arr.map((ship) => {

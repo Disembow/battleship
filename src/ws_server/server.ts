@@ -2,16 +2,17 @@ import { WebSocket, WebSocketServer } from 'ws';
 import {
   AddUserToRoomReq,
   Attack,
+  AttackStatus,
   Commands,
-  IGame,
   IRegRequest,
   IRegRequestData,
   StartingFieldReq,
 } from './types/types.js';
 import Users from './db/users.js';
 import { validateAuth } from './utils/validateAuth.js';
-import RoomsDB from './db/rooms.js';
-import { USERS_PER_GAME } from './constants.js';
+import RoomsDB, { IGame } from './db/rooms.js';
+import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './constants.js';
+import { getEmptyArray } from './utils/getEmptyArray.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
@@ -123,17 +124,23 @@ export const ws_server = (port: number) => {
         case Commands.AddShips: {
           const { gameId, indexPlayer, ships } = <StartingFieldReq>JSON.parse(data);
           const game = RoomsDB.findGameById(gameId);
+          const shipsCoords = RoomsDB.createInitialShipState(ships);
+          const killed = getEmptyArray(FIELD_SIDE_SIZE);
 
           // Fill the initial game state on add_ships event
           if (!game) {
             const newGame = { ws: [ws], ids: [indexPlayer] } as IGame;
             newGame[indexPlayer] = {
               ships,
+              shipsCoords,
+              killed,
             };
             RoomsDB.setGame(gameId, newGame);
           } else {
             game[indexPlayer] = {
               ships,
+              shipsCoords,
+              killed,
             };
             game.ws.push(ws);
             game.ids.push(indexPlayer);
@@ -172,20 +179,48 @@ export const ws_server = (port: number) => {
           const game = RoomsDB.findGameById(gameId)!;
           const { ids, turn, ws } = game;
 
-          const status = ws.forEach((e) => {
+          const secondPlayerId = ids[ids.indexOf(indexPlayer) === 0 ? 1 : 0];
+          const shipsCoords = game[secondPlayerId].shipsCoords;
+          const killedCoords = game[secondPlayerId].killed;
+
+          // send attack response
+          const status = RoomsDB.shot(`${x}-${y}`, shipsCoords, killedCoords);
+          console.log(status);
+
+          ws.forEach((e) => {
             const attack = JSON.stringify({
               type: Commands.Attack,
               data: JSON.stringify({
-                position: JSON.stringify({
+                position: {
                   x,
                   y,
-                }),
-                currentPlayer: turn,
+                },
+                currentPlayer: indexPlayer,
                 status,
               }),
             });
 
             e.send(attack);
+
+            // send next turn
+            let nextTurn;
+            if (status === AttackStatus.Miss) {
+              nextTurn = JSON.stringify({
+                type: Commands.Turn,
+                data: JSON.stringify({
+                  currentPlayer: secondPlayerId,
+                }),
+              });
+            } else {
+              nextTurn = JSON.stringify({
+                type: Commands.Turn,
+                data: JSON.stringify({
+                  currentPlayer: indexPlayer,
+                }),
+              });
+            }
+
+            e.send(nextTurn);
           });
 
           break;
