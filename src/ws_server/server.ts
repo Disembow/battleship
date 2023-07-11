@@ -171,7 +171,7 @@ export const ws_server = (port: number) => {
           const game = RoomsDB.findGameById(gameId)!;
           const { ids, turn, ws } = game;
 
-          ws.forEach((e) => {
+          const status = ws.forEach((e) => {
             const attack = JSON.stringify({
               type: Commands.Attack,
               data: JSON.stringify({
@@ -179,10 +179,12 @@ export const ws_server = (port: number) => {
                   x,
                   y,
                 }),
+                currentPlayer: turn,
+                status,
               }),
             });
 
-            e.send('');
+            e.send(attack);
           });
 
           break;
