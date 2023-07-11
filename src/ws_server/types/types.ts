@@ -1,3 +1,5 @@
+import { TShipInfo } from '../db/rooms.js';
+
 export enum Commands {
   AddShips = 'add_ships',
   AddUserToRoom = 'add_user_to_room',
@@ -26,3 +28,17 @@ export interface IRegRequestData {
 export type AddUserToRoomReq = {
   indexRoom: number;
 };
+
+export type StartingFieldReq = {
+  gameId: number;
+  indexPlayer: number;
+  ships: TShipInfo[];
+};
+
+export type Attack = Pick<StartingFieldReq, 'gameId' | 'indexPlayer'> & { x: number; y: number };
+
+export enum AttackStatus {
+  Killed = 'killed',
+  Miss = 'miss',
+  Shot = 'shot',
+}

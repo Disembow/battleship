@@ -17,24 +17,20 @@ export type TShipInfo = {
   type: typeof ShipType;
 };
 
-export type StartingFieldReq = {
-  gameId: number;
-  indexPlayer: number;
-  ships: TShipInfo[];
-};
-
 export interface IGame {
   [key: number]: {
     ships: TShipInfo[];
   };
   ws: WebSocket[];
+  ids: number[];
+  turn: number;
 }
 
 class RoomsDB {
-  rooms;
-  games;
-  lastRoomId: number;
-  lastGameId: number;
+  private rooms;
+  private games;
+  private lastRoomId: number;
+  private lastGameId: number;
 
   constructor() {
     // Each room contains an array of websockets
@@ -59,9 +55,9 @@ class RoomsDB {
     return this.lastRoomId;
   }
 
-  public addUserToRoom(roomId: number, ws: WebSocket): void {
-    this.rooms.get(roomId)?.push(ws);
-  }
+  // public addUserToRoom(roomId: number, ws: WebSocket): void {
+  //   this.rooms.get(roomId)?.push(ws);
+  // }
 
   public setGame(gameId: number, gameState: IGame): void {
     this.games.set(gameId, gameState);
@@ -75,6 +71,12 @@ class RoomsDB {
     this.lastGameId += 1;
     return this.lastGameId;
   }
+
+  public selectFirstPlayerToTurn() {
+    return Math.round(Math.random());
+  }
+
+  public changeTurnByRoomId(id: number) {}
 }
 
 export default new RoomsDB();

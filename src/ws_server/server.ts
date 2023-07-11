@@ -1,8 +1,15 @@
 import { WebSocket, WebSocketServer } from 'ws';
-import { AddUserToRoomReq, Commands, IRegRequest, IRegRequestData } from './types/types.js';
+import {
+  AddUserToRoomReq,
+  Attack,
+  Commands,
+  IRegRequest,
+  IRegRequestData,
+  StartingFieldReq,
+} from './types/types.js';
 import Users from './db/users.js';
 import { validateAuth } from './utils/validateAuth.js';
-import RoomsDB, { IGame, StartingFieldReq } from './db/rooms.js';
+import RoomsDB, { IGame } from './db/rooms.js';
 import { USERS_PER_GAME } from './constants.js';
 
 export const ws_server = (port: number) => {
@@ -112,13 +119,13 @@ export const ws_server = (port: number) => {
           break;
         }
 
-        case Commands.AddShips:
+        case Commands.AddShips: {
           const { gameId, indexPlayer, ships } = <StartingFieldReq>JSON.parse(data);
           const game = RoomsDB.findGameById(gameId);
 
           // Fill the initial game state on add_ships event
           if (!game) {
-            const newGame = { ws: [ws] } as IGame;
+            const newGame = { ws: [ws], ids: [indexPlayer] } as IGame;
             newGame[indexPlayer] = {
               ships,
             };
@@ -128,10 +135,13 @@ export const ws_server = (port: number) => {
               ships,
             };
             game.ws.push(ws);
+            game.ids.push(indexPlayer);
           }
 
-          // Send message to players with their initial state
+          // Send message to players with their initial state & first turn
           if (game?.ws.length === USERS_PER_GAME) {
+            const firstPlayer = RoomsDB.selectFirstPlayerToTurn();
+
             game.ws.forEach((client) => {
               const userId = Users.getUser(client)?.index!;
 
@@ -143,11 +153,40 @@ export const ws_server = (port: number) => {
 
               client.send(startState);
 
-              // client.send(turn);
+              const turn = JSON.stringify({
+                type: Commands.Turn,
+                data: JSON.stringify({
+                  currentPlayer: game.ids[firstPlayer],
+                }),
+              });
+
+              client.send(turn);
             });
           }
+          break;
+        }
+
+        case Commands.Attack: {
+          const { gameId, x, y, indexPlayer } = <Attack>JSON.parse(data);
+          const game = RoomsDB.findGameById(gameId)!;
+          const { ids, turn, ws } = game;
+
+          ws.forEach((e) => {
+            const attack = JSON.stringify({
+              type: Commands.Attack,
+              data: JSON.stringify({
+                position: JSON.stringify({
+                  x,
+                  y,
+                }),
+              }),
+            });
+
+            e.send('');
+          });
 
           break;
+        }
       }
     });
   });
