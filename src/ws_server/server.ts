@@ -161,10 +161,12 @@ export const ws_server = (port: number) => {
 
               client.send(startState);
 
+              game.turn = game.ids[firstPlayer];
+
               const turn = JSON.stringify({
                 type: Commands.Turn,
                 data: JSON.stringify({
-                  currentPlayer: game.ids[firstPlayer],
+                  currentPlayer: game.turn,
                 }),
               });
 
@@ -185,43 +187,46 @@ export const ws_server = (port: number) => {
 
           // send attack response
           const status = RoomsDB.shot(`${x}-${y}`, shipsCoords, killedCoords);
-          console.log(status);
 
-          ws.forEach((e) => {
-            const attack = JSON.stringify({
-              type: Commands.Attack,
-              data: JSON.stringify({
-                position: {
-                  x,
-                  y,
-                },
-                currentPlayer: indexPlayer,
-                status,
-              }),
-            });
-
-            e.send(attack);
-
-            // send next turn
-            let nextTurn;
-            if (status === AttackStatus.Miss) {
-              nextTurn = JSON.stringify({
-                type: Commands.Turn,
+          if (turn === indexPlayer) {
+            ws.forEach((e) => {
+              const attack = JSON.stringify({
+                type: Commands.Attack,
                 data: JSON.stringify({
-                  currentPlayer: secondPlayerId,
-                }),
-              });
-            } else {
-              nextTurn = JSON.stringify({
-                type: Commands.Turn,
-                data: JSON.stringify({
+                  position: {
+                    x,
+                    y,
+                  },
                   currentPlayer: indexPlayer,
+                  status,
                 }),
               });
-            }
 
-            e.send(nextTurn);
-          });
+              e.send(attack);
+
+              // send next turn
+              let nextTurn;
+              if (status === AttackStatus.Miss) {
+                nextTurn = JSON.stringify({
+                  type: Commands.Turn,
+                  data: JSON.stringify({
+                    currentPlayer: secondPlayerId,
+                  }),
+                });
+
+                game.turn = secondPlayerId;
+              } else {
+                nextTurn = JSON.stringify({
+                  type: Commands.Turn,
+                  data: JSON.stringify({
+                    currentPlayer: indexPlayer,
+                  }),
+                });
+              }
+
+              e.send(nextTurn);
+            });
+          }
 
           break;
         }
