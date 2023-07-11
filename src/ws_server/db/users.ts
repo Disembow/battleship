@@ -6,7 +6,7 @@ interface IUser {
   password: string;
 }
 
-class Users {
+export class Users {
   db;
   lastUserId: number;
 

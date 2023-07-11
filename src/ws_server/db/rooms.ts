@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
 import { AttackStatus, TShipInfo, TShipsCoords } from '../types/types.js';
+import { Users } from './users.js';
 
 export interface IGame {
   [key: number]: {
@@ -7,7 +8,7 @@ export interface IGame {
     shipsCoords: TShipsCoords;
     killed: TShipsCoords;
   };
-  ws: WebSocket[];
+  usersInGame: WebSocket[];
   ids: number[];
   turn: number;
 }
@@ -15,19 +16,29 @@ export interface IGame {
 interface IRoomDB {
   shot(target: string, init: TShipsCoords, killed: TShipsCoords): AttackStatus;
   createInitialShipState(arr: TShipInfo[]): TShipsCoords;
+  getAllWinners(): TWinners[];
+  updateWinner(name: string): void;
 }
 
-class RoomsDB implements IRoomDB {
+type TWinners = {
+  name: string;
+  wins: number;
+};
+
+class RoomsDB extends Users implements IRoomDB {
   private rooms;
   private games;
+  private winners: TWinners[];
   private lastRoomId: number;
   private lastGameId: number;
 
   constructor() {
+    super();
     // Each room contains an array of websockets
     this.rooms = new Map<number, WebSocket[]>();
     // Each game contains an object with keys as userId & value as ship stat
     this.games = new Map<number, IGame>();
+    this.winners = [];
 
     this.lastRoomId = 0;
     this.lastGameId = 0;
@@ -109,6 +120,27 @@ class RoomsDB implements IRoomDB {
     });
 
     return status;
+  }
+
+  public getAllWinners() {
+    return this.winners;
+  }
+
+  public updateWinner(name: string) {
+    const winner = this.winners.find((e) => e.name === name);
+
+    if (winner) {
+      winner.wins += 0.5;
+    } else {
+      this.setWinner(name, 0.5);
+    }
+  }
+
+  private setWinner(name: string, wins: number = 0) {
+    this.winners.push({
+      name,
+      wins,
+    });
   }
 }
 

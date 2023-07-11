@@ -129,7 +129,7 @@ export const ws_server = (port: number) => {
 
           // Fill the initial game state on add_ships event
           if (!game) {
-            const newGame = { ws: [ws], ids: [indexPlayer] } as IGame;
+            const newGame = { usersInGame: [ws], ids: [indexPlayer] } as IGame;
             newGame[indexPlayer] = {
               ships,
               shipsCoords,
@@ -142,15 +142,15 @@ export const ws_server = (port: number) => {
               shipsCoords,
               killed,
             };
-            game.ws.push(ws);
+            game.usersInGame.push(ws);
             game.ids.push(indexPlayer);
           }
 
           // Send message to players with their initial state & first turn
-          if (game?.ws.length === USERS_PER_GAME) {
+          if (game?.usersInGame.length === USERS_PER_GAME) {
             const firstPlayer = RoomsDB.selectFirstPlayerToTurn();
 
-            game.ws.forEach((client) => {
+            game.usersInGame.forEach((client) => {
               const userId = Users.getUser(client)?.index!;
 
               const startState = JSON.stringify({
@@ -179,7 +179,7 @@ export const ws_server = (port: number) => {
         case Commands.Attack: {
           const { gameId, x, y, indexPlayer } = <Attack>JSON.parse(data);
           const game = RoomsDB.findGameById(gameId)!;
-          const { ids, turn, ws } = game;
+          const { ids, turn, usersInGame } = game;
 
           const secondPlayerId = ids[ids.indexOf(indexPlayer) === 0 ? 1 : 0];
           const shipsCoords = game[secondPlayerId].shipsCoords;
@@ -189,7 +189,7 @@ export const ws_server = (port: number) => {
           const status = RoomsDB.shot(`${x}-${y}`, shipsCoords, killedCoords);
 
           if (turn === indexPlayer) {
-            ws.forEach((e) => {
+            usersInGame.forEach((e) => {
               const attack = JSON.stringify({
                 type: Commands.Attack,
                 data: JSON.stringify({
@@ -224,6 +224,7 @@ export const ws_server = (port: number) => {
                 });
               }
 
+              // win case //TODO check rooms state
               if (shipsCoords.length === 0) {
                 const finishGame = JSON.stringify({
                   type: Commands.Finish,
@@ -233,6 +234,19 @@ export const ws_server = (port: number) => {
                 });
 
                 e.send(finishGame);
+
+                RoomsDB.updateWinner(Users.getUser(ws)!.name);
+
+                const winners = JSON.stringify({
+                  type: Commands.UpdateWinners,
+                  data: JSON.stringify(RoomsDB.getAllWinners()),
+                });
+
+                wss.clients.forEach((client) => {
+                  if (client.readyState === WebSocket.OPEN) {
+                    client.send(winners);
+                  }
+                });
               } else {
                 e.send(nextTurn);
               }
