@@ -3,13 +3,14 @@ import {
   AddUserToRoomReq,
   Attack,
   Commands,
+  IGame,
   IRegRequest,
   IRegRequestData,
   StartingFieldReq,
 } from './types/types.js';
 import Users from './db/users.js';
 import { validateAuth } from './utils/validateAuth.js';
-import RoomsDB, { IGame } from './db/rooms.js';
+import RoomsDB from './db/rooms.js';
 import { USERS_PER_GAME } from './constants.js';
 
 export const ws_server = (port: number) => {

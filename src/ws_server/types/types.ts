@@ -1,4 +1,4 @@
-import { TShipInfo } from '../db/rooms.js';
+import { WebSocket } from 'ws';
 
 export enum Commands {
   AddShips = 'add_ships',
@@ -35,6 +35,15 @@ export type StartingFieldReq = {
   ships: TShipInfo[];
 };
 
+export interface IGame {
+  [key: number]: {
+    ships: TShipInfo[];
+  };
+  ws: WebSocket[];
+  ids: number[];
+  turn: number;
+}
+
 export type Attack = Pick<StartingFieldReq, 'gameId' | 'indexPlayer'> & { x: number; y: number };
 
 export enum AttackStatus {
@@ -42,3 +51,22 @@ export enum AttackStatus {
   Miss = 'miss',
   Shot = 'shot',
 }
+
+export enum ShipType {
+  Small = 'small',
+  Medium = 'medium',
+  Large = 'large',
+  Huge = 'huge',
+}
+
+export type TShipsCoords = Array<Array<string>>;
+
+export type TShipInfo = {
+  position: {
+    x: number;
+    y: number;
+  };
+  direction: boolean;
+  length: number;
+  type: typeof ShipType;
+};

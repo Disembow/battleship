@@ -1,36 +1,9 @@
 import { WebSocket } from 'ws';
-import { AttackStatus } from '../types/types.js';
-
-enum ShipType {
-  Small = 'small',
-  Medium = 'medium',
-  Large = 'large',
-  Huge = 'huge',
-}
-
-type TShips = Array<Array<string>>;
-
-export type TShipInfo = {
-  position: {
-    x: number;
-    y: number;
-  };
-  direction: boolean;
-  length: number;
-  type: typeof ShipType;
-};
-
-export interface IGame {
-  [key: number]: {
-    ships: TShipInfo[];
-  };
-  ws: WebSocket[];
-  ids: number[];
-  turn: number;
-}
+import { AttackStatus, IGame, TShipInfo, TShipsCoords } from '../types/types.js';
 
 interface IRoomDB {
-  shot(target: string, init: TShips, killed: TShips): AttackStatus;
+  shot(target: string, init: TShipsCoords, killed: TShipsCoords): AttackStatus;
+  setInitialShipState(arr: TShipInfo[]): TShipsCoords;
 }
 
 class RoomsDB implements IRoomDB {
@@ -81,7 +54,7 @@ class RoomsDB implements IRoomDB {
 
   public changeTurnByRoomId(id: number) {}
 
-  public shot(target: string, init: TShips, killed: TShips) {
+  public shot(target: string, init: TShipsCoords, killed: TShipsCoords) {
     let result = AttackStatus.Miss;
 
     init.forEach((ship, shipIndex) => {
@@ -103,6 +76,30 @@ class RoomsDB implements IRoomDB {
     });
 
     return result;
+  }
+
+  public setInitialShipState(arr: TShipInfo[]) {
+    const status: TShipsCoords = [];
+
+    arr.map((ship) => {
+      const { x, y } = ship.position;
+      const { direction, length } = ship;
+      const state: string[] = [];
+
+      if (direction) {
+        for (let i = 0; i < length; i++) {
+          state.push(`${x}-${y + i}`);
+        }
+        status.push(state);
+      } else {
+        for (let i = 0; i < length; i++) {
+          state.push(`${x + i}-${y}`);
+        }
+        status.push(state);
+      }
+    });
+
+    return status;
   }
 }
 
