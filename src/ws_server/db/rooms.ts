@@ -7,12 +7,13 @@ enum ShipType {
   Huge = 'huge',
 }
 
-type TShipInfo = {
+export type TShipInfo = {
   position: {
     x: number;
     y: number;
   };
   direction: boolean;
+  length: number;
   type: typeof ShipType;
 };
 
