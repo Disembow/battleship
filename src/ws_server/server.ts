@@ -14,7 +14,7 @@ import RoomsDB from './db/rooms.js';
 import { validateAuth } from './utils/validateAuth.js';
 import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './constants.js';
 import { getEmptyArray } from './utils/getEmptyArray.js';
-import rooms from './db/rooms.js';
+import { updateRooms } from './utils/updateRooms.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
@@ -46,9 +46,14 @@ export const ws_server = (port: number) => {
             }),
           });
 
-          //TODO: add room update by user log in
-
           ws.send(response);
+
+          // Update rooms state
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(updateRooms());
+            }
+          });
           break;
         }
 
@@ -59,14 +64,10 @@ export const ws_server = (port: number) => {
 
           if (name && index) RoomsDB.setRoom(newRoomId, ws, name, index);
 
-          const response = JSON.stringify({
-            type: Commands.UpdateRoom,
-            data: JSON.stringify(rooms.getAllRooms()),
-          });
-
+          // Update rooms state
           wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-              client.send(response);
+              client.send(updateRooms());
             }
           });
           break;
