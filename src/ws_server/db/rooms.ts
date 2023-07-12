@@ -155,17 +155,6 @@ class RoomsDB extends Users implements IRoomDB {
     return result;
   }
 
-  // public shotAroundShip(killedShip: string[], shipsCoords: TShipsCoords, killed: TShipsCoords) {
-  //   const direction = getShipDirection(killedShip);
-  //   const mainAxis =
-  //     direction === 'h' ? +killedShip[0].split('-')[1] : +killedShip[0].split('-')[0];
-
-  //   const coordsAroundShip = getCoordsAroundShip(killedShip, mainAxis, direction);
-  //   coordsAroundShip.forEach((e) => {
-  //     const [status, _] = this.shot(e, shipsCoords, killed) as [AttackStatus, string[]];
-  //   });
-  // }
-
   public createInitialShipState(arr: TShipInfo[]) {
     const status: TShipsCoords = [];
 

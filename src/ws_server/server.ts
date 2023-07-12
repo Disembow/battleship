@@ -16,7 +16,8 @@ import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './constants.js';
 import { getEmptyArray } from './utils/getEmptyArray.js';
 import { updateRooms } from './utils/updateRooms.js';
 import { getCoordsAroundShip } from './utils/getCoordsAroundShip.js';
-import { getShipDirection } from './utils/getShipDirection.js';
+import { attackShip } from './utils/attackShip.js';
+import { createGame } from './utils/createGame.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
@@ -93,7 +94,7 @@ export const ws_server = (port: number) => {
               });
 
               if (client.readyState === WebSocket.OPEN) {
-                client.send(createdRoom);
+                client.send(createGame(idGame, client));
               }
             });
 
@@ -180,19 +181,7 @@ export const ws_server = (port: number) => {
 
           if (turn === indexPlayer) {
             usersInGame.forEach((e) => {
-              const attack = JSON.stringify({
-                type: Commands.Attack,
-                data: JSON.stringify({
-                  position: {
-                    x,
-                    y,
-                  },
-                  currentPlayer: indexPlayer,
-                  status,
-                }),
-              });
-
-              e.send(attack);
+              e.send(attackShip(x, y, indexPlayer, status));
 
               // shot around the ship
               if (status === AttackStatus.Killed) {
@@ -202,19 +191,7 @@ export const ws_server = (port: number) => {
                   const [xx, yy] = ship.split('-');
 
                   usersInGame.forEach((client) => {
-                    const attack = JSON.stringify({
-                      type: Commands.Attack,
-                      data: JSON.stringify({
-                        position: {
-                          x: xx,
-                          y: yy,
-                        },
-                        currentPlayer: indexPlayer,
-                        status: AttackStatus.Miss,
-                      }),
-                    });
-
-                    client.send(attack);
+                    client.send(attackShip(Number(xx), Number(yy), indexPlayer, AttackStatus.Miss));
                   });
                 });
               }
