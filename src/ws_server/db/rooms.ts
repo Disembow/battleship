@@ -1,6 +1,13 @@
 import { WebSocket } from 'ws';
-import { AttackStatus, TShipInfo, TShipsCoords } from '../types/types.js';
+import { AttackStatus, TShipInfo, TShipsCoords, TWinners } from '../types/types.js';
 import { Users } from './users.js';
+
+interface IRoomDB {
+  shot(target: string, init: TShipsCoords, killed: TShipsCoords): AttackStatus;
+  createInitialShipState(arr: TShipInfo[]): TShipsCoords;
+  getAllWinners(): TWinners[];
+  updateWinner(name: string): void;
+}
 
 export interface IGame {
   [key: number]: {
@@ -13,17 +20,20 @@ export interface IGame {
   turn: number;
 }
 
-interface IRoomDB {
-  shot(target: string, init: TShipsCoords, killed: TShipsCoords): AttackStatus;
-  createInitialShipState(arr: TShipInfo[]): TShipsCoords;
-  getAllWinners(): TWinners[];
-  updateWinner(name: string): void;
-}
-
-type TWinners = {
+type TRoomUsers = {
   name: string;
-  wins: number;
+  index: number;
 };
+
+type TRoomResponse = {
+  roomId: number;
+  roomUsers: TRoomUsers[];
+};
+
+export interface IRoom {
+  usersWS: WebSocket[];
+  roomUsers: TRoomUsers[];
+}
 
 class RoomsDB extends Users implements IRoomDB {
   private rooms;
@@ -34,8 +44,8 @@ class RoomsDB extends Users implements IRoomDB {
 
   constructor() {
     super();
-    // Each room contains an array of websockets
-    this.rooms = new Map<number, WebSocket[]>();
+    // Each room contains websockets array of 1 or 2 players & their info
+    this.rooms = new Map<number, IRoom>();
     // Each game contains an object with keys as userId & value as ship stat
     this.games = new Map<number, IGame>();
     this.winners = [];
@@ -44,11 +54,32 @@ class RoomsDB extends Users implements IRoomDB {
     this.lastGameId = 0;
   }
 
-  public setRoom(roomId: number, value: WebSocket): void {
-    this.rooms.set(roomId, [value]);
+  public setRoom(roomId: number, ws: WebSocket, name: string, index: number): void {
+    this.rooms.set(roomId, {
+      usersWS: [ws],
+      roomUsers: [
+        {
+          name,
+          index,
+        },
+      ],
+    });
   }
 
-  public getRoom(roomId: number): WebSocket[] | undefined {
+  public getAllRooms() {
+    const result: TRoomResponse[] = [];
+
+    this.rooms.forEach((value, key) => {
+      result.push({
+        roomId: key,
+        roomUsers: value.roomUsers,
+      });
+    });
+
+    return result;
+  }
+
+  public getRoom(roomId: number): IRoom | undefined {
     return this.rooms.get(roomId);
   }
 

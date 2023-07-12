@@ -13,6 +13,7 @@ import { validateAuth } from './utils/validateAuth.js';
 import RoomsDB, { IGame } from './db/rooms.js';
 import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './constants.js';
 import { getEmptyArray } from './utils/getEmptyArray.js';
+import rooms from './db/rooms.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
@@ -51,24 +52,15 @@ export const ws_server = (port: number) => {
         }
 
         case Commands.CreateRoom: {
-          //TODO: add multi rooms
           const newRoomId = RoomsDB.getRoomId();
+          const name = Users.db.get(ws)?.name;
+          const index = Users.db.get(ws)?.index;
 
-          RoomsDB.setRoom(newRoomId, ws);
+          if (name && index) RoomsDB.setRoom(newRoomId, ws, name, index);
 
           const response = JSON.stringify({
             type: Commands.UpdateRoom,
-            data: JSON.stringify([
-              {
-                roomId: newRoomId,
-                roomUsers: [
-                  {
-                    name: Users.db.get(ws)?.name,
-                    index: Users.db.get(ws)?.index,
-                  },
-                ],
-              },
-            ]),
+            data: JSON.stringify(rooms.getAllRooms()),
           });
 
           wss.clients.forEach((client) => {
@@ -82,12 +74,12 @@ export const ws_server = (port: number) => {
         case Commands.AddUserToRoom: {
           const { indexRoom } = <AddUserToRoomReq>JSON.parse(data);
           const players = RoomsDB.getRoom(indexRoom);
-          players?.push(ws);
+          players?.usersWS.push(ws);
 
-          if (players?.length === USERS_PER_GAME) {
+          if (players?.usersWS.length === USERS_PER_GAME) {
             const idGame = RoomsDB.getGameId();
 
-            players.forEach((client) => {
+            players.usersWS.forEach((client) => {
               const createdRoom = JSON.stringify({
                 type: Commands.CreateGame,
                 data: JSON.stringify({

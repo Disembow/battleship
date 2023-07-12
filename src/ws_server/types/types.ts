@@ -61,3 +61,8 @@ export type TShipInfo = {
   length: number;
   type: typeof ShipType;
 };
+
+export type TWinners = {
+  name: string;
+  wins: number;
+};
