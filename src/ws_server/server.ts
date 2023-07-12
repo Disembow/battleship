@@ -86,7 +86,7 @@ export const ws_server = (port: number) => {
                 type: Commands.CreateGame,
                 data: JSON.stringify({
                   idGame,
-                  idPlayer: UsersDB.db.get(client)?.index, //TODO: update
+                  idPlayer: UsersDB.db.get(client)?.index,
                 }),
               });
 
@@ -95,20 +95,11 @@ export const ws_server = (port: number) => {
               }
             });
 
-            const updatedAfterCreate = JSON.stringify({
-              type: Commands.UpdateRoom,
-              data: JSON.stringify([
-                {
-                  //TODO: delete room by id
-                  roomId: 0,
-                  roomUsers: [],
-                },
-              ]),
-            });
+            RoomsDB.deleteRoomById(indexRoom);
 
             wss.clients.forEach((client) => {
               if (client.readyState === WebSocket.OPEN) {
-                client.send(updatedAfterCreate);
+                client.send(updateRooms());
               }
             });
           }

@@ -59,7 +59,7 @@ class RoomsDB extends Users implements IRoomDB {
     });
   }
 
-  public getAllRooms() {
+  public getAllRooms(): TRoomResponse[] {
     const result: TRoomResponse[] = [];
 
     this.rooms.forEach((value, key) => {
@@ -79,6 +79,10 @@ class RoomsDB extends Users implements IRoomDB {
   public getRoomId(): number {
     this.lastRoomId += 1;
     return this.lastRoomId;
+  }
+
+  public deleteRoomById(id: number): void {
+    this.rooms.delete(id);
   }
 
   public setGame(gameId: number, gameState: IGame): void {
