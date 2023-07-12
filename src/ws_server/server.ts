@@ -196,22 +196,7 @@ export const ws_server = (port: number) => {
 
               // shot around the ship
               if (status === AttackStatus.Killed) {
-                const direction = getShipDirection(killedShip);
-                const mainAxis =
-                  direction === 'h' ? +killedShip[0].split('-')[1] : +killedShip[0].split('-')[0];
-                let line: string[] = [];
-
-                killedShip.map((e) => {
-                  const [a, b] = e.split('-');
-
-                  if (direction === 'h') {
-                    line.push(a);
-                  } else {
-                    line.push(b);
-                  }
-                });
-
-                const roundCoords = getCoordsAroundShip(line, mainAxis, direction);
+                const roundCoords = getCoordsAroundShip(killedShip);
 
                 roundCoords.forEach((ship) => {
                   const [xx, yy] = ship.split('-');
