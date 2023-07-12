@@ -66,3 +66,29 @@ export type TWinners = {
   name: string;
   wins: number;
 };
+
+export type TRoomUsers = {
+  name: string;
+  index: number;
+};
+
+export type TRoomResponse = {
+  roomId: number;
+  roomUsers: TRoomUsers[];
+};
+
+export interface IGame {
+  [key: number]: {
+    ships: TShipInfo[];
+    shipsCoords: TShipsCoords;
+    killed: TShipsCoords;
+  };
+  usersInGame: WebSocket[];
+  ids: number[];
+  turn: number;
+}
+
+export interface IRoom {
+  usersWS: WebSocket[];
+  roomUsers: TRoomUsers[];
+}

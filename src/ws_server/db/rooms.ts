@@ -1,38 +1,31 @@
 import { WebSocket } from 'ws';
-import { AttackStatus, TShipInfo, TShipsCoords, TWinners } from '../types/types.js';
+import {
+  AttackStatus,
+  IGame,
+  IRoom,
+  TRoomResponse,
+  TShipInfo,
+  TShipsCoords,
+  TWinners,
+} from '../types/types.js';
 import { Users } from './users.js';
 
 interface IRoomDB {
-  shot(target: string, init: TShipsCoords, killed: TShipsCoords): AttackStatus;
-  createInitialShipState(arr: TShipInfo[]): TShipsCoords;
+  setRoom(roomId: number, ws: WebSocket, name: string, index: number): void;
+  getAllRooms(): TRoomResponse[];
+  getRoomById(roomId: number): IRoom | undefined;
+  getRoomId(): number;
+
+  findGameById(gameId: number): IGame | undefined;
+  getGameId(): number;
+  selectFirstPlayerToTurn(): number;
+
   getAllWinners(): TWinners[];
   updateWinner(name: string): void;
-}
+  setGame(gameId: number, gameState: IGame): void;
 
-export interface IGame {
-  [key: number]: {
-    ships: TShipInfo[];
-    shipsCoords: TShipsCoords;
-    killed: TShipsCoords;
-  };
-  usersInGame: WebSocket[];
-  ids: number[];
-  turn: number;
-}
-
-type TRoomUsers = {
-  name: string;
-  index: number;
-};
-
-type TRoomResponse = {
-  roomId: number;
-  roomUsers: TRoomUsers[];
-};
-
-export interface IRoom {
-  usersWS: WebSocket[];
-  roomUsers: TRoomUsers[];
+  shot(target: string, init: TShipsCoords, killed: TShipsCoords): AttackStatus;
+  createInitialShipState(arr: TShipInfo[]): TShipsCoords;
 }
 
 class RoomsDB extends Users implements IRoomDB {
@@ -79,7 +72,7 @@ class RoomsDB extends Users implements IRoomDB {
     return result;
   }
 
-  public getRoom(roomId: number): IRoom | undefined {
+  public getRoomById(roomId: number): IRoom | undefined {
     return this.rooms.get(roomId);
   }
 
@@ -101,11 +94,32 @@ class RoomsDB extends Users implements IRoomDB {
     return this.lastGameId;
   }
 
-  public selectFirstPlayerToTurn() {
+  public getAllWinners() {
+    return this.winners;
+  }
+
+  public updateWinner(name: string) {
+    const winner = this.winners.find((e) => e.name === name);
+
+    if (winner) {
+      winner.wins += 0.5;
+    } else {
+      this.setWinner(name, 0.5);
+    }
+  }
+
+  private setWinner(name: string, wins: number = 0) {
+    this.winners.push({
+      name,
+      wins,
+    });
+  }
+
+  public selectFirstPlayerToTurn(): number {
     return Math.round(Math.random());
   }
 
-  public shot(target: string, shipsCoords: TShipsCoords, killed: TShipsCoords) {
+  public shot(target: string, shipsCoords: TShipsCoords, killed: TShipsCoords): AttackStatus {
     let result = AttackStatus.Miss;
 
     shipsCoords.forEach((ship, shipIndex) => {
@@ -151,27 +165,6 @@ class RoomsDB extends Users implements IRoomDB {
     });
 
     return status;
-  }
-
-  public getAllWinners() {
-    return this.winners;
-  }
-
-  public updateWinner(name: string) {
-    const winner = this.winners.find((e) => e.name === name);
-
-    if (winner) {
-      winner.wins += 0.5;
-    } else {
-      this.setWinner(name, 0.5);
-    }
-  }
-
-  private setWinner(name: string, wins: number = 0) {
-    this.winners.push({
-      name,
-      wins,
-    });
   }
 }
 

@@ -4,13 +4,14 @@ import {
   Attack,
   AttackStatus,
   Commands,
+  IGame,
   IRegRequest,
   IRegRequestData,
   StartingFieldReq,
 } from './types/types.js';
-import Users from './db/users.js';
+import UsersDB from './db/users.js';
+import RoomsDB from './db/rooms.js';
 import { validateAuth } from './utils/validateAuth.js';
-import RoomsDB, { IGame } from './db/rooms.js';
 import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './constants.js';
 import { getEmptyArray } from './utils/getEmptyArray.js';
 import rooms from './db/rooms.js';
@@ -30,8 +31,8 @@ export const ws_server = (port: number) => {
         case Commands.Reg: {
           const { name, password } = <IRegRequestData>JSON.parse(data);
 
-          const index = Users.getUserId();
-          Users.setUser(ws, { index, name, password });
+          const index = UsersDB.getUserId();
+          UsersDB.setUser(ws, { index, name, password });
 
           const [error, errorText] = validateAuth(name, password);
 
@@ -53,8 +54,8 @@ export const ws_server = (port: number) => {
 
         case Commands.CreateRoom: {
           const newRoomId = RoomsDB.getRoomId();
-          const name = Users.db.get(ws)?.name;
-          const index = Users.db.get(ws)?.index;
+          const name = UsersDB.db.get(ws)?.name;
+          const index = UsersDB.db.get(ws)?.index;
 
           if (name && index) RoomsDB.setRoom(newRoomId, ws, name, index);
 
@@ -73,7 +74,7 @@ export const ws_server = (port: number) => {
 
         case Commands.AddUserToRoom: {
           const { indexRoom } = <AddUserToRoomReq>JSON.parse(data);
-          const players = RoomsDB.getRoom(indexRoom);
+          const players = RoomsDB.getRoomById(indexRoom);
           players?.usersWS.push(ws);
 
           if (players?.usersWS.length === USERS_PER_GAME) {
@@ -84,7 +85,7 @@ export const ws_server = (port: number) => {
                 type: Commands.CreateGame,
                 data: JSON.stringify({
                   idGame,
-                  idPlayer: Users.db.get(client)?.index, //TODO: update
+                  idPlayer: UsersDB.db.get(client)?.index, //TODO: update
                 }),
               });
 
@@ -143,7 +144,7 @@ export const ws_server = (port: number) => {
             const firstPlayer = RoomsDB.selectFirstPlayerToTurn();
 
             game.usersInGame.forEach((client) => {
-              const userId = Users.getUser(client)?.index!;
+              const userId = UsersDB.getUser(client)?.index!;
 
               const startState = JSON.stringify({
                 type: Commands.StartGame,
@@ -227,7 +228,7 @@ export const ws_server = (port: number) => {
 
                 e.send(finishGame);
 
-                RoomsDB.updateWinner(Users.getUser(ws)!.name);
+                RoomsDB.updateWinner(UsersDB.getUser(ws)!.name);
 
                 const winners = JSON.stringify({
                   type: Commands.UpdateWinners,
