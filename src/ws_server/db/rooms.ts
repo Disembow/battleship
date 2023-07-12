@@ -9,6 +9,8 @@ import {
   TWinners,
 } from '../types/types.js';
 import { Users } from './users.js';
+import { getShipDirection } from '../utils/getShipDirection.js';
+import { getCoordsAroundShip } from '../utils/getCoordsAroundShip.js';
 
 interface IRoomDB {
   setRoom(roomId: number, ws: WebSocket, name: string, index: number): void;
@@ -24,7 +26,7 @@ interface IRoomDB {
   updateWinner(name: string): void;
   setGame(gameId: number, gameState: IGame): void;
 
-  shot(target: string, init: TShipsCoords, killed: TShipsCoords): AttackStatus;
+  shot(target: string, init: TShipsCoords, killed: TShipsCoords): (AttackStatus | string[])[];
   createInitialShipState(arr: TShipInfo[]): TShipsCoords;
 }
 
@@ -123,22 +125,28 @@ class RoomsDB extends Users implements IRoomDB {
     return Math.round(Math.random());
   }
 
-  public shot(target: string, shipsCoords: TShipsCoords, killed: TShipsCoords): AttackStatus {
-    let result = AttackStatus.Miss;
+  public shot(
+    target: string,
+    shipsCoords: TShipsCoords,
+    killed: TShipsCoords,
+  ): (AttackStatus | string[])[] {
+    let result = [AttackStatus.Miss, ['']];
 
     shipsCoords.forEach((ship, shipIndex) => {
       ship.forEach((coord, coordIndex) => {
         if (coord === target) {
           killed[shipIndex][coordIndex] = target;
-          result = AttackStatus.Shot;
+          result = [AttackStatus.Shot, ['']];
         }
 
         shipsCoords.forEach((e, i) => {
           if (JSON.stringify(e) === JSON.stringify(killed[i])) {
+            const killedShip = killed[i];
+
             shipsCoords.splice(i, 1);
             killed.splice(i, 1);
 
-            result = AttackStatus.Killed;
+            result = [AttackStatus.Killed, killedShip];
           }
         });
       });
@@ -146,6 +154,17 @@ class RoomsDB extends Users implements IRoomDB {
 
     return result;
   }
+
+  // public shotAroundShip(killedShip: string[], shipsCoords: TShipsCoords, killed: TShipsCoords) {
+  //   const direction = getShipDirection(killedShip);
+  //   const mainAxis =
+  //     direction === 'h' ? +killedShip[0].split('-')[1] : +killedShip[0].split('-')[0];
+
+  //   const coordsAroundShip = getCoordsAroundShip(killedShip, mainAxis, direction);
+  //   coordsAroundShip.forEach((e) => {
+  //     const [status, _] = this.shot(e, shipsCoords, killed) as [AttackStatus, string[]];
+  //   });
+  // }
 
   public createInitialShipState(arr: TShipInfo[]) {
     const status: TShipsCoords = [];

@@ -15,6 +15,8 @@ import { validateAuth } from './utils/validateAuth.js';
 import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './constants.js';
 import { getEmptyArray } from './utils/getEmptyArray.js';
 import { updateRooms } from './utils/updateRooms.js';
+import { getCoordsAroundShip } from './utils/getCoordsAroundShip.js';
+import { getShipDirection } from './utils/getShipDirection.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
@@ -171,7 +173,10 @@ export const ws_server = (port: number) => {
           const killedCoords = game[secondPlayerId].killed;
 
           // send attack response
-          const status = RoomsDB.shot(`${x}-${y}`, shipsCoords, killedCoords);
+          const [status, killedShip] = RoomsDB.shot(`${x}-${y}`, shipsCoords, killedCoords) as [
+            AttackStatus,
+            string[],
+          ];
 
           if (turn === indexPlayer) {
             usersInGame.forEach((e) => {
@@ -189,7 +194,47 @@ export const ws_server = (port: number) => {
 
               e.send(attack);
 
-              // send next turn //TODO: send miss status after killing the ship
+              // shot around the ship
+              if (status === AttackStatus.Killed) {
+                const direction = getShipDirection(killedShip);
+                const mainAxis =
+                  direction === 'h' ? +killedShip[0].split('-')[1] : +killedShip[0].split('-')[0];
+                let line: string[] = [];
+
+                killedShip.map((e) => {
+                  const [a, b] = e.split('-');
+
+                  if (direction === 'h') {
+                    line.push(a);
+                  } else {
+                    line.push(b);
+                  }
+                });
+
+                const roundCoords = getCoordsAroundShip(line, mainAxis, direction);
+
+                roundCoords.forEach((ship) => {
+                  const [xx, yy] = ship.split('-');
+
+                  usersInGame.forEach((client) => {
+                    const attack = JSON.stringify({
+                      type: Commands.Attack,
+                      data: JSON.stringify({
+                        position: {
+                          x: xx,
+                          y: yy,
+                        },
+                        currentPlayer: indexPlayer,
+                        status: AttackStatus.Miss,
+                      }),
+                    });
+
+                    client.send(attack);
+                  });
+                });
+              }
+
+              // send next turn
               let nextTurn;
               if (status === AttackStatus.Miss) {
                 nextTurn = JSON.stringify({
@@ -209,7 +254,8 @@ export const ws_server = (port: number) => {
                 });
               }
 
-              // win case //TODO check rooms state
+              // win case
+              //TODO check rooms state
               if (shipsCoords.length === 0) {
                 const finishGame = JSON.stringify({
                   type: Commands.Finish,
