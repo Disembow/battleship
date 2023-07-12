@@ -204,7 +204,7 @@ export const ws_server = (port: number) => {
 
               e.send(attack);
 
-              // send next turn
+              // send next turn //TODO: send miss status after killing the ship
               let nextTurn;
               if (status === AttackStatus.Miss) {
                 nextTurn = JSON.stringify({
