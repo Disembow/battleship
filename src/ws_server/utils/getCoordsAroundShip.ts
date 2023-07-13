@@ -7,8 +7,8 @@ export const getCoordsAroundShip = (killedShip: string[]) => {
   const mainAxis = direction === 'h' ? +killedShip[0].split('-')[1] : +killedShip[0].split('-')[0];
 
   let line: string[] = [];
-  killedShip.map((e) => {
-    const [a, b] = e.split('-');
+  killedShip.map((coords) => {
+    const [a, b] = coords.split('-');
     if (direction === 'h') {
       line.push(a);
     } else {

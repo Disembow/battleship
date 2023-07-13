@@ -45,8 +45,6 @@ export const ws_server = (port: number) => {
 
           ws.send(response);
 
-          const a = 5;
-
           // Update rooms state
           wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {

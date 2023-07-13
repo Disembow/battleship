@@ -100,7 +100,7 @@ export class RoomsDB extends UsersDB implements IRoomDB {
   }
 
   public updateWinner(name: string) {
-    const winner = this.winners.find((e) => e.name === name);
+    const winner = this.winners.find((winner) => winner.name === name);
 
     if (winner) {
       winner.wins += 0.5;

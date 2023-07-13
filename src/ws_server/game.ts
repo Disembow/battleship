@@ -58,8 +58,8 @@ class Game extends RoomsDB implements IGame {
           result = [AttackStatus.Shot, ['']];
         }
 
-        shipsCoords.forEach((e, i) => {
-          if (JSON.stringify(e) === JSON.stringify(killed[i])) {
+        shipsCoords.forEach((ship, i) => {
+          if (JSON.stringify(ship) === JSON.stringify(killed[i])) {
             const killedShip = killed[i];
 
             shipsCoords.splice(i, 1);
@@ -90,8 +90,8 @@ class Game extends RoomsDB implements IGame {
     ];
 
     if (turn === indexPlayer) {
-      usersInGame.forEach((e) => {
-        e.send(this.attackShip(x, y, indexPlayer, status));
+      usersInGame.forEach((user) => {
+        user.send(this.attackShip(x, y, indexPlayer, status));
 
         // shot around the ship
         if (status === AttackStatus.Killed) {
@@ -134,7 +134,7 @@ class Game extends RoomsDB implements IGame {
             data: JSON.stringify({ winPlayer: indexPlayer }),
           });
 
-          e.send(finishGame);
+          user.send(finishGame);
 
           this.updateWinner(this.getUser(ws)!.name);
 
@@ -149,7 +149,7 @@ class Game extends RoomsDB implements IGame {
             }
           });
         } else {
-          e.send(nextTurn);
+          user.send(nextTurn);
         }
       });
     }
