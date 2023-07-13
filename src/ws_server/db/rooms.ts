@@ -1,21 +1,22 @@
-import { WebSocket } from 'ws';
-import { Commands, IGame, IRoom, TRoomResponse, TWinners } from '../types/types.js';
+import { WebSocket, WebSocketServer } from 'ws';
+import { Commands, IGameState, IRoom, TRoomResponse, TWinners } from '../types/types.js';
 import { UsersDB } from './users.js';
 
 interface IRoomDB {
   setRoom(roomId: number, ws: WebSocket, name: string, index: number): void;
+  createRoom(ws: WebSocket, wss: WebSocketServer): void;
   getAllRooms(): TRoomResponse[];
   getRoomById(roomId: number): IRoom | undefined;
   getRoomId(): number;
   updateRooms(): string;
 
-  findGameById(gameId: number): IGame | undefined;
+  findGameById(gameId: number): IGameState | undefined;
   getGameId(): number;
   selectFirstPlayerToTurn(): number;
 
   getAllWinners(): TWinners[];
   updateWinner(name: string): void;
-  setGame(gameId: number, gameState: IGame): void;
+  setGame(gameId: number, gameState: IGameState): void;
 }
 
 export class RoomsDB extends UsersDB implements IRoomDB {
@@ -30,7 +31,7 @@ export class RoomsDB extends UsersDB implements IRoomDB {
     // Each room contains websockets array of 1 or 2 players & their info
     this.rooms = new Map<number, IRoom>();
     // Each game contains an object with keys as userId & value as ship stat
-    this.games = new Map<number, IGame>();
+    this.games = new Map<number, IGameState>();
     this.winners = [];
 
     this.lastRoomId = 0;
@@ -46,6 +47,21 @@ export class RoomsDB extends UsersDB implements IRoomDB {
           index,
         },
       ],
+    });
+  }
+
+  public createRoom(ws: WebSocket, wss: WebSocketServer): void {
+    const newRoomId = this.getRoomId();
+    const name = this.db.get(ws)?.name;
+    const index = this.db.get(ws)?.index;
+
+    if (name && index) this.setRoom(newRoomId, ws, name, index);
+
+    // Update rooms state
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(this.updateRooms());
+      }
     });
   }
 
@@ -82,11 +98,11 @@ export class RoomsDB extends UsersDB implements IRoomDB {
     this.rooms.delete(id);
   }
 
-  public setGame(gameId: number, gameState: IGame): void {
+  public setGame(gameId: number, gameState: IGameState): void {
     this.games.set(gameId, gameState);
   }
 
-  public findGameById(gameId: number): IGame | undefined {
+  public findGameById(gameId: number): IGameState | undefined {
     return this.games.get(gameId);
   }
 

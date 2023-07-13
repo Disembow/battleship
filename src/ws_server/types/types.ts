@@ -78,7 +78,7 @@ export type TRoomResponse = {
   roomUsers: TRoomUsers[];
 };
 
-export interface IGame {
+export interface IGameState {
   [key: number]: {
     ships: TShipInfo[];
     shipsCoords: TShipsCoords;

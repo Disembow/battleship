@@ -1,18 +1,62 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import { RoomsDB } from './db/rooms.js';
-import { Attack, AttackStatus, Commands, TShipInfo, TShipsCoords } from './types/types.js';
+import {
+  AddUserToRoomReq,
+  Attack,
+  AttackStatus,
+  Commands,
+  IGameState,
+  IRegRequestData,
+  StartingFieldReq,
+  TShipInfo,
+  TShipsCoords,
+} from './types/types.js';
 import { getCoordsAroundShip } from './utils/getCoordsAroundShip.js';
+import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './data/constants.js';
+import { getEmptyArray } from './utils/getEmptyArray.js';
+import { validateAuth } from './utils/validateAuth.js';
+import { randomShotCoords } from './utils/randomShotCoords.js';
 
 interface IGame {
+  createUser(data: string, ws: WebSocket, wss: WebSocketServer): void;
   createGame(idGame: number, client: WebSocket): string;
-  createInitialShipState(arr: TShipInfo[]): TShipsCoords;
+  addUserToRoom(data: string, ws: WebSocket, wss: WebSocketServer): void;
   shot(target: string, init: TShipsCoords, killed: TShipsCoords): (AttackStatus | string[])[];
   makeShot(data: string, ws: WebSocket, wss: WebSocketServer): void;
+  randomAttack(data: string, ws: WebSocket, wss: WebSocketServer): void;
 }
 
 class Game extends RoomsDB implements IGame {
   constructor() {
     super();
+  }
+
+  public createUser(data: string, ws: WebSocket, wss: WebSocketServer): void {
+    const { name, password } = <IRegRequestData>JSON.parse(data);
+
+    const index = this.getUserId();
+    this.setUser(ws, { index, name, password });
+
+    const [error, errorText] = validateAuth(name, password);
+
+    const response = JSON.stringify({
+      type: Commands.Reg,
+      data: JSON.stringify({
+        name,
+        index,
+        error,
+        errorText,
+      }),
+    });
+
+    ws.send(response);
+
+    // Update rooms state
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(this.updateRooms());
+      }
+    });
   }
 
   public createGame(idGame: number, client: WebSocket): string {
@@ -23,6 +67,84 @@ class Game extends RoomsDB implements IGame {
         idPlayer: this.db.get(client)?.index,
       }),
     });
+  }
+
+  public addUserToRoom(data: string, ws: WebSocket, wss: WebSocketServer): void {
+    const { indexRoom } = <AddUserToRoomReq>JSON.parse(data);
+    const players = this.getRoomById(indexRoom);
+    players?.usersWS.push(ws);
+
+    if (players?.usersWS.length === USERS_PER_GAME) {
+      const idGame = this.getGameId();
+
+      players.usersWS.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(this.createGame(idGame, client));
+        }
+      });
+
+      this.deleteRoomById(indexRoom);
+
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(this.updateRooms());
+        }
+      });
+    }
+  }
+
+  public addShips(data: string, ws: WebSocket): void {
+    const { gameId, indexPlayer, ships } = <StartingFieldReq>JSON.parse(data);
+    const game = this.findGameById(gameId);
+    const shipsCoords = this.createInitialShipState(ships);
+    const killed = getEmptyArray(FIELD_SIDE_SIZE);
+
+    // Fill the initial game state on add_ships event
+    if (!game) {
+      const newGame = { usersInGame: [ws], ids: [indexPlayer] } as IGameState;
+      newGame[indexPlayer] = {
+        ships,
+        shipsCoords,
+        killed,
+      };
+      this.setGame(gameId, newGame);
+    } else {
+      game[indexPlayer] = {
+        ships,
+        shipsCoords,
+        killed,
+      };
+      game.usersInGame.push(ws);
+      game.ids.push(indexPlayer);
+    }
+
+    // Send message to players with their initial state & first turn
+    if (game?.usersInGame.length === USERS_PER_GAME) {
+      const firstPlayer = this.selectFirstPlayerToTurn();
+
+      game.usersInGame.forEach((client) => {
+        const userId = this.getUser(client)?.index!;
+
+        const startState = JSON.stringify({
+          type: Commands.StartGame,
+          data: game[userId].ships,
+          currentPlayerIndex: userId,
+        });
+
+        client.send(startState);
+
+        game.turn = game.ids[firstPlayer];
+
+        const turn = JSON.stringify({
+          type: Commands.Turn,
+          data: JSON.stringify({
+            currentPlayer: game.turn,
+          }),
+        });
+
+        client.send(turn);
+      });
+    }
   }
 
   private attackShip(
@@ -155,7 +277,16 @@ class Game extends RoomsDB implements IGame {
     }
   }
 
-  public createInitialShipState(arr: TShipInfo[]) {
+  public randomAttack(data: string, ws: WebSocket, wss: WebSocketServer): void {
+    const { gameId, indexPlayer } = <Pick<StartingFieldReq, 'gameId' | 'indexPlayer'>>(
+      JSON.parse(data)
+    );
+    const [x, y] = randomShotCoords(0, FIELD_SIDE_SIZE);
+    const newData = JSON.stringify({ gameId, x, y, indexPlayer });
+    this.makeShot(newData, ws, wss);
+  }
+
+  private createInitialShipState(arr: TShipInfo[]): TShipsCoords {
     const status: TShipsCoords = [];
 
     arr.map((ship) => {
