@@ -11,10 +11,8 @@ import {
   TWinners,
 } from '../types/types.js';
 import { Users } from './users.js';
-import { getShipDirection } from '../utils/getShipDirection.js';
 import { getCoordsAroundShip } from '../utils/getCoordsAroundShip.js';
 import { attackShip } from '../utils/attackShip.js';
-import { IncomingMessage } from 'http';
 
 interface IRoomDB {
   setRoom(roomId: number, ws: WebSocket, name: string, index: number): void;
@@ -31,6 +29,7 @@ interface IRoomDB {
   setGame(gameId: number, gameState: IGame): void;
 
   shot(target: string, init: TShipsCoords, killed: TShipsCoords): (AttackStatus | string[])[];
+  makeShot(data: string, ws: WebSocket, wss: WebSocketServer): void;
   createInitialShipState(arr: TShipInfo[]): TShipsCoords;
 }
 
@@ -216,9 +215,7 @@ class RoomsDB extends Users implements IRoomDB {
         if (shipsCoords.length === 0) {
           const finishGame = JSON.stringify({
             type: Commands.Finish,
-            data: JSON.stringify({
-              winPlayer: indexPlayer,
-            }),
+            data: JSON.stringify({ winPlayer: indexPlayer }),
           });
 
           e.send(finishGame);

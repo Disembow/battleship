@@ -1,8 +1,6 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import {
   AddUserToRoomReq,
-  Attack,
-  AttackStatus,
   Commands,
   IGame,
   IRegRequest,
@@ -12,11 +10,9 @@ import {
 import UsersDB from './db/users.js';
 import RoomsDB from './db/rooms.js';
 import { validateAuth } from './utils/validateAuth.js';
-import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './constants.js';
+import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './data/constants.js';
 import { getEmptyArray } from './utils/getEmptyArray.js';
 import { updateRooms } from './utils/updateRooms.js';
-import { getCoordsAroundShip } from './utils/getCoordsAroundShip.js';
-import { attackShip } from './utils/attackShip.js';
 import { createGame } from './utils/createGame.js';
 import { randomShotCoords } from './utils/randomShotCoords.js';
 
@@ -168,7 +164,6 @@ export const ws_server = (port: number) => {
           const { gameId, indexPlayer } = <Pick<StartingFieldReq, 'gameId' | 'indexPlayer'>>(
             JSON.parse(data)
           );
-
           const [x, y] = randomShotCoords(0, FIELD_SIDE_SIZE);
           const newData = JSON.stringify({ gameId, x, y, indexPlayer });
           RoomsDB.makeShot(newData, ws, wss);

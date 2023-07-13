@@ -1,7 +1,6 @@
-import { FIELD_SIDE_SIZE } from '../constants.js';
+import { FIELD_SIDE_SIZE } from '../data/constants.js';
 import { getShipDirection } from './getShipDirection.js';
 
-// export const getCoordsAroundShip = (arr: string[], main: number, dir: 'h' | 'v') => {
 export const getCoordsAroundShip = (killedShip: string[]) => {
   let result: string[] = [];
   const direction = getShipDirection(killedShip);
