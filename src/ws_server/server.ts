@@ -18,6 +18,7 @@ import { updateRooms } from './utils/updateRooms.js';
 import { getCoordsAroundShip } from './utils/getCoordsAroundShip.js';
 import { attackShip } from './utils/attackShip.js';
 import { createGame } from './utils/createGame.js';
+import { randomShotCoords } from './utils/randomShotCoords.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
@@ -50,6 +51,8 @@ export const ws_server = (port: number) => {
           });
 
           ws.send(response);
+
+          const a = 5;
 
           // Update rooms state
           wss.clients.forEach((client) => {
@@ -85,14 +88,6 @@ export const ws_server = (port: number) => {
             const idGame = RoomsDB.getGameId();
 
             players.usersWS.forEach((client) => {
-              const createdRoom = JSON.stringify({
-                type: Commands.CreateGame,
-                data: JSON.stringify({
-                  idGame,
-                  idPlayer: UsersDB.db.get(client)?.index,
-                }),
-              });
-
               if (client.readyState === WebSocket.OPEN) {
                 client.send(createGame(idGame, client));
               }
@@ -165,87 +160,18 @@ export const ws_server = (port: number) => {
         }
 
         case Commands.Attack: {
-          const { gameId, x, y, indexPlayer } = <Attack>JSON.parse(data);
-          const game = RoomsDB.findGameById(gameId)!;
-          const { ids, turn, usersInGame } = game;
+          RoomsDB.makeShot(data, ws, wss);
+          break;
+        }
 
-          const secondPlayerId = ids[ids.indexOf(indexPlayer) === 0 ? 1 : 0];
-          const shipsCoords = game[secondPlayerId].shipsCoords;
-          const killedCoords = game[secondPlayerId].killed;
+        case Commands.RandomAttack: {
+          const { gameId, indexPlayer } = <Pick<StartingFieldReq, 'gameId' | 'indexPlayer'>>(
+            JSON.parse(data)
+          );
 
-          // send attack response
-          const [status, killedShip] = RoomsDB.shot(`${x}-${y}`, shipsCoords, killedCoords) as [
-            AttackStatus,
-            string[],
-          ];
-
-          if (turn === indexPlayer) {
-            usersInGame.forEach((e) => {
-              e.send(attackShip(x, y, indexPlayer, status));
-
-              // shot around the ship
-              if (status === AttackStatus.Killed) {
-                const roundCoords = getCoordsAroundShip(killedShip);
-
-                roundCoords.forEach((ship) => {
-                  const [xx, yy] = ship.split('-');
-
-                  usersInGame.forEach((client) => {
-                    client.send(attackShip(Number(xx), Number(yy), indexPlayer, AttackStatus.Miss));
-                  });
-                });
-              }
-
-              // send next turn
-              let nextTurn;
-              if (status === AttackStatus.Miss) {
-                nextTurn = JSON.stringify({
-                  type: Commands.Turn,
-                  data: JSON.stringify({
-                    currentPlayer: secondPlayerId,
-                  }),
-                });
-
-                game.turn = secondPlayerId;
-              } else {
-                nextTurn = JSON.stringify({
-                  type: Commands.Turn,
-                  data: JSON.stringify({
-                    currentPlayer: indexPlayer,
-                  }),
-                });
-              }
-
-              // win case
-              //TODO check rooms state
-              if (shipsCoords.length === 0) {
-                const finishGame = JSON.stringify({
-                  type: Commands.Finish,
-                  data: JSON.stringify({
-                    winPlayer: indexPlayer,
-                  }),
-                });
-
-                e.send(finishGame);
-
-                RoomsDB.updateWinner(UsersDB.getUser(ws)!.name);
-
-                const winners = JSON.stringify({
-                  type: Commands.UpdateWinners,
-                  data: JSON.stringify(RoomsDB.getAllWinners()),
-                });
-
-                wss.clients.forEach((client) => {
-                  if (client.readyState === WebSocket.OPEN) {
-                    client.send(winners);
-                  }
-                });
-              } else {
-                e.send(nextTurn);
-              }
-            });
-          }
-
+          const [x, y] = randomShotCoords(0, FIELD_SIDE_SIZE);
+          const newData = JSON.stringify({ gameId, x, y, indexPlayer });
+          RoomsDB.makeShot(newData, ws, wss);
           break;
         }
       }

@@ -1,6 +1,8 @@
-import { WebSocket } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import {
+  Attack,
   AttackStatus,
+  Commands,
   IGame,
   IRoom,
   TRoomResponse,
@@ -11,6 +13,8 @@ import {
 import { Users } from './users.js';
 import { getShipDirection } from '../utils/getShipDirection.js';
 import { getCoordsAroundShip } from '../utils/getCoordsAroundShip.js';
+import { attackShip } from '../utils/attackShip.js';
+import { IncomingMessage } from 'http';
 
 interface IRoomDB {
   setRoom(roomId: number, ws: WebSocket, name: string, index: number): void;
@@ -153,6 +157,89 @@ class RoomsDB extends Users implements IRoomDB {
     });
 
     return result;
+  }
+
+  public makeShot(data: string, ws: WebSocket, wss: WebSocketServer) {
+    const { gameId, x, y, indexPlayer } = <Attack>JSON.parse(data);
+    const game = this.findGameById(gameId)!;
+    const { ids, turn, usersInGame } = game;
+
+    const secondPlayerId = ids[ids.indexOf(indexPlayer) === 0 ? 1 : 0];
+    const shipsCoords = game[secondPlayerId].shipsCoords;
+    const killedCoords = game[secondPlayerId].killed;
+
+    // send attack response
+    const [status, killedShip] = this.shot(`${x}-${y}`, shipsCoords, killedCoords) as [
+      AttackStatus,
+      string[],
+    ];
+
+    if (turn === indexPlayer) {
+      usersInGame.forEach((e) => {
+        e.send(attackShip(x, y, indexPlayer, status));
+
+        // shot around the ship
+        if (status === AttackStatus.Killed) {
+          const roundCoords = getCoordsAroundShip(killedShip);
+
+          roundCoords.forEach((ship) => {
+            const [xx, yy] = ship.split('-');
+
+            usersInGame.forEach((client) => {
+              client.send(attackShip(xx, yy, indexPlayer, AttackStatus.Miss));
+            });
+          });
+        }
+
+        // send next turn
+        let nextTurn;
+        if (status === AttackStatus.Miss) {
+          nextTurn = JSON.stringify({
+            type: Commands.Turn,
+            data: JSON.stringify({
+              currentPlayer: secondPlayerId,
+            }),
+          });
+
+          game.turn = secondPlayerId;
+        } else {
+          nextTurn = JSON.stringify({
+            type: Commands.Turn,
+            data: JSON.stringify({
+              currentPlayer: indexPlayer,
+            }),
+          });
+        }
+
+        // win case
+        //TODO check rooms state
+        if (shipsCoords.length === 0) {
+          const finishGame = JSON.stringify({
+            type: Commands.Finish,
+            data: JSON.stringify({
+              winPlayer: indexPlayer,
+            }),
+          });
+
+          e.send(finishGame);
+
+          this.updateWinner(this.getUser(ws)!.name);
+
+          const winners = JSON.stringify({
+            type: Commands.UpdateWinners,
+            data: JSON.stringify(this.getAllWinners()),
+          });
+
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(winners);
+            }
+          });
+        } else {
+          e.send(nextTurn);
+        }
+      });
+    }
   }
 
   public createInitialShipState(arr: TShipInfo[]) {
