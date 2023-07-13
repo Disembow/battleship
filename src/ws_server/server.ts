@@ -7,13 +7,10 @@ import {
   IRegRequestData,
   StartingFieldReq,
 } from './types/types.js';
-import UsersDB from './db/users.js';
-import RoomsDB from './db/rooms.js';
+import Game from './game.js';
 import { validateAuth } from './utils/validateAuth.js';
 import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './data/constants.js';
 import { getEmptyArray } from './utils/getEmptyArray.js';
-import { updateRooms } from './utils/updateRooms.js';
-import { createGame } from './utils/createGame.js';
 import { randomShotCoords } from './utils/randomShotCoords.js';
 
 export const ws_server = (port: number) => {
@@ -31,8 +28,8 @@ export const ws_server = (port: number) => {
         case Commands.Reg: {
           const { name, password } = <IRegRequestData>JSON.parse(data);
 
-          const index = UsersDB.getUserId();
-          UsersDB.setUser(ws, { index, name, password });
+          const index = Game.getUserId();
+          Game.setUser(ws, { index, name, password });
 
           const [error, errorText] = validateAuth(name, password);
 
@@ -53,23 +50,23 @@ export const ws_server = (port: number) => {
           // Update rooms state
           wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-              client.send(updateRooms());
+              client.send(Game.updateRooms());
             }
           });
           break;
         }
 
         case Commands.CreateRoom: {
-          const newRoomId = RoomsDB.getRoomId();
-          const name = UsersDB.db.get(ws)?.name;
-          const index = UsersDB.db.get(ws)?.index;
+          const newRoomId = Game.getRoomId();
+          const name = Game.db.get(ws)?.name;
+          const index = Game.db.get(ws)?.index;
 
-          if (name && index) RoomsDB.setRoom(newRoomId, ws, name, index);
+          if (name && index) Game.setRoom(newRoomId, ws, name, index);
 
           // Update rooms state
           wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-              client.send(updateRooms());
+              client.send(Game.updateRooms());
             }
           });
           break;
@@ -77,23 +74,23 @@ export const ws_server = (port: number) => {
 
         case Commands.AddUserToRoom: {
           const { indexRoom } = <AddUserToRoomReq>JSON.parse(data);
-          const players = RoomsDB.getRoomById(indexRoom);
+          const players = Game.getRoomById(indexRoom);
           players?.usersWS.push(ws);
 
           if (players?.usersWS.length === USERS_PER_GAME) {
-            const idGame = RoomsDB.getGameId();
+            const idGame = Game.getGameId();
 
             players.usersWS.forEach((client) => {
               if (client.readyState === WebSocket.OPEN) {
-                client.send(createGame(idGame, client));
+                client.send(Game.createGame(idGame, client));
               }
             });
 
-            RoomsDB.deleteRoomById(indexRoom);
+            Game.deleteRoomById(indexRoom);
 
             wss.clients.forEach((client) => {
               if (client.readyState === WebSocket.OPEN) {
-                client.send(updateRooms());
+                client.send(Game.updateRooms());
               }
             });
           }
@@ -102,8 +99,8 @@ export const ws_server = (port: number) => {
 
         case Commands.AddShips: {
           const { gameId, indexPlayer, ships } = <StartingFieldReq>JSON.parse(data);
-          const game = RoomsDB.findGameById(gameId);
-          const shipsCoords = RoomsDB.createInitialShipState(ships);
+          const game = Game.findGameById(gameId);
+          const shipsCoords = Game.createInitialShipState(ships);
           const killed = getEmptyArray(FIELD_SIDE_SIZE);
 
           // Fill the initial game state on add_ships event
@@ -114,7 +111,7 @@ export const ws_server = (port: number) => {
               shipsCoords,
               killed,
             };
-            RoomsDB.setGame(gameId, newGame);
+            Game.setGame(gameId, newGame);
           } else {
             game[indexPlayer] = {
               ships,
@@ -127,10 +124,10 @@ export const ws_server = (port: number) => {
 
           // Send message to players with their initial state & first turn
           if (game?.usersInGame.length === USERS_PER_GAME) {
-            const firstPlayer = RoomsDB.selectFirstPlayerToTurn();
+            const firstPlayer = Game.selectFirstPlayerToTurn();
 
             game.usersInGame.forEach((client) => {
-              const userId = UsersDB.getUser(client)?.index!;
+              const userId = Game.getUser(client)?.index!;
 
               const startState = JSON.stringify({
                 type: Commands.StartGame,
@@ -156,7 +153,7 @@ export const ws_server = (port: number) => {
         }
 
         case Commands.Attack: {
-          RoomsDB.makeShot(data, ws, wss);
+          Game.makeShot(data, ws, wss);
           break;
         }
 
@@ -166,7 +163,7 @@ export const ws_server = (port: number) => {
           );
           const [x, y] = randomShotCoords(0, FIELD_SIDE_SIZE);
           const newData = JSON.stringify({ gameId, x, y, indexPlayer });
-          RoomsDB.makeShot(newData, ws, wss);
+          Game.makeShot(newData, ws, wss);
           break;
         }
       }

@@ -12,7 +12,7 @@ interface IUsers {
   getUserId(): number;
 }
 
-export class Users implements IUsers {
+export class UsersDB implements IUsers {
   db;
   lastUserId: number;
 
@@ -34,5 +34,3 @@ export class Users implements IUsers {
     return this.lastUserId;
   }
 }
-
-export default new Users();
