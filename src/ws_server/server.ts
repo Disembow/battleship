@@ -164,6 +164,11 @@ export const ws_server = (port: number) => {
           Game.makeShot(newData, ws, wss);
           break;
         }
+
+        case Commands.SinglePlay: {
+          //TODO: implement
+          break;
+        }
       }
     });
   });

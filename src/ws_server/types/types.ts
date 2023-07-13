@@ -9,6 +9,7 @@ export enum Commands {
   Finish = 'finish',
   RandomAttack = 'randomAttack',
   Reg = 'reg',
+  SinglePlay = 'single_play',
   StartGame = 'start_game',
   Turn = 'turn',
   UpdateRoom = 'update_room',
