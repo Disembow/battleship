@@ -14,7 +14,6 @@ import {
 import { getCoordsAroundShip } from '../utils/getCoordsAroundShip.js';
 import { FIELD_SIDE_SIZE, USERS_PER_GAME } from '../data/constants.js';
 import { getEmptyArray } from '../utils/getEmptyArray.js';
-import { validateAuth } from '../utils/validateAuth.js';
 import { randomShotCoords } from '../utils/randomShotCoords.js';
 
 interface IGame {
@@ -37,16 +36,11 @@ export class GameController extends RoomsDB implements IGame {
     const index = this.getUserId();
     this.setUser(ws, { index, name, password });
 
-    const [error, errorText] = validateAuth(name, password);
+    const [error, errorText] = this.validateAuth(name, password);
 
     const response = JSON.stringify({
       type: Commands.Reg,
-      data: JSON.stringify({
-        name,
-        index,
-        error,
-        errorText,
-      }),
+      data: JSON.stringify({ name, index, error, errorText }),
     });
 
     ws.send(response);
@@ -103,12 +97,12 @@ export class GameController extends RoomsDB implements IGame {
 
   public addShips(data: string, ws: WebSocket): void {
     const { gameId, indexPlayer, ships } = <StartingFieldReq>JSON.parse(data);
-    const game = this.findGameById(gameId);
+    const currentGame = this.findGameById(gameId);
     const shipsCoords = this.createInitialShipState(ships);
     const killed = getEmptyArray(FIELD_SIDE_SIZE);
 
     // Fill the initial game state on add_ships event
-    if (!game) {
+    if (!currentGame) {
       const newGame = { usersInGame: [ws], ids: [indexPlayer] } as IGameState;
       newGame[indexPlayer] = {
         ships,
@@ -117,37 +111,35 @@ export class GameController extends RoomsDB implements IGame {
       };
       this.setGame(gameId, newGame);
     } else {
-      game[indexPlayer] = {
+      currentGame[indexPlayer] = {
         ships,
         shipsCoords,
         killed,
       };
-      game.usersInGame.push(ws);
-      game.ids.push(indexPlayer);
+      currentGame.usersInGame.push(ws);
+      currentGame.ids.push(indexPlayer);
     }
 
     // Send message to players with their initial state & first turn
-    if (game?.usersInGame.length === USERS_PER_GAME) {
+    if (currentGame?.usersInGame.length === USERS_PER_GAME) {
       const firstPlayer = this.selectFirstPlayerToTurn();
 
-      game.usersInGame.forEach((client) => {
+      currentGame.usersInGame.forEach((client) => {
         const userId = this.getUser(client)?.index!;
 
         const startState = JSON.stringify({
           type: Commands.StartGame,
-          data: game[userId].ships,
+          data: currentGame[userId].ships,
           currentPlayerIndex: userId,
         });
 
         client.send(startState);
 
-        game.turn = game.ids[firstPlayer];
+        currentGame.turn = currentGame.ids[firstPlayer];
 
         const turn = JSON.stringify({
           type: Commands.Turn,
-          data: JSON.stringify({
-            currentPlayer: game.turn,
-          }),
+          data: JSON.stringify({ currentPlayer: currentGame.turn }),
         });
 
         client.send(turn);
@@ -164,10 +156,7 @@ export class GameController extends RoomsDB implements IGame {
     return JSON.stringify({
       type: Commands.Attack,
       data: JSON.stringify({
-        position: {
-          x,
-          y,
-        },
+        position: { x, y },
         currentPlayer: indexPlayer,
         status,
       }),
@@ -188,16 +177,14 @@ export class GameController extends RoomsDB implements IGame {
           result = [AttackStatus.Shot, ['']];
         }
 
-        shipsCoords.forEach((ship, i) => {
-          if (JSON.stringify(ship) === JSON.stringify(killed[i])) {
-            const killedShip = killed[i];
+        if (JSON.stringify(ship) === JSON.stringify(killed[shipIndex])) {
+          const killedShip = killed[shipIndex];
 
-            shipsCoords.splice(i, 1);
-            killed.splice(i, 1);
+          shipsCoords.splice(shipIndex, 1);
+          killed.splice(shipIndex, 1);
 
-            result = [AttackStatus.Killed, killedShip];
-          }
-        });
+          result = [AttackStatus.Killed, killedShip];
+        }
       });
     });
 
