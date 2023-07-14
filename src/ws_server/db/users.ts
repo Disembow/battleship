@@ -5,7 +5,7 @@ interface IUsers {
   setUser(key: WebSocket, value: TUser): void;
   getUser(key: WebSocket): TUser | undefined;
   getUserId(): number;
-  validateAuth(name: string, password: string): (string | boolean)[];
+  validateAuth(name: string, password: string, ws: WebSocket): (string | boolean)[];
 }
 
 export class UsersDB implements IUsers {
@@ -32,15 +32,41 @@ export class UsersDB implements IUsers {
     return this.lastUserId;
   }
 
-  public validateAuth(name: string, password: string): (string | boolean)[] {
-    if (!this.regex.test(name) && this.regex.test(password)) {
-      return [true, 'Name must have minimum 5 chars length'];
-    } else if (this.regex.test(name) && !this.regex.test(password)) {
-      return [true, 'Password must have minimum 5 chars length'];
-    } else if (!this.regex.test(name) && !this.regex.test(password)) {
-      return [true, 'Name and password must have minimum 5 chars length'];
+  private getUserKeyByName(name: string): WebSocket | null {
+    for (let [key, value] of this.db.entries()) {
+      if (value.name === name) {
+        return key;
+      }
+    }
+
+    return null;
+  }
+
+  public validateAuth(username: string, password: string, ws: WebSocket): (string | boolean)[] {
+    const key = this.getUserKeyByName(username);
+
+    if (!key) {
+      if (!this.regex.test(username) && this.regex.test(password)) {
+        return [true, 'Name must have minimum 5 chars length'];
+      } else if (this.regex.test(username) && !this.regex.test(password)) {
+        return [true, 'Password must have minimum 5 chars length'];
+      } else if (!this.regex.test(username) && !this.regex.test(password)) {
+        return [true, 'Name and password must have minimum 5 chars length'];
+      } else {
+        return [false, ''];
+      }
     } else {
-      return [false, ''];
+      const name = this.getUser(key)!.name;
+      const currPassword = this.getUser(key)!.password;
+      const index = this.getUser(key)!.index;
+
+      if (currPassword !== password) {
+        return [true, 'Wrong password'];
+      } else {
+        this.db.delete(key);
+        this.setUser(key, { index, name, password: currPassword });
+        return [false, ''];
+      }
     }
   }
 }

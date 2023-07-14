@@ -83,7 +83,7 @@ export class GameController extends RoomsDB implements IGame {
     const index = this.getUserId();
     this.setUser(ws, { index, name, password });
 
-    const [error, errorText] = this.validateAuth(name, password);
+    const [error, errorText] = this.validateAuth(name, password, ws);
 
     const response = JSON.stringify({
       type: Commands.Reg,
