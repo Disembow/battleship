@@ -18,9 +18,7 @@ import { randomShotCoords } from '../utils/randomShotCoords.js';
 
 interface IGame {
   createUser(data: string, ws: WebSocket, wss: WebSocketServer): void;
-  createGame(idGame: number, client: WebSocket): string;
   addUserToRoom(data: string, ws: WebSocket, wss: WebSocketServer): void;
-  shot(target: string, init: TShipsCoords, killed: TShipsCoords): (AttackStatus | string[])[];
   makeShot(data: string, ws: WebSocket, wss: WebSocketServer): void;
   randomAttack(data: string, ws: WebSocket, wss: WebSocketServer): void;
 }
@@ -28,6 +26,55 @@ interface IGame {
 export class GameController extends RoomsDB implements IGame {
   constructor() {
     super();
+  }
+
+  private createGameRes(idGame: number, client: WebSocket): string {
+    return JSON.stringify({
+      type: Commands.CreateGame,
+      data: JSON.stringify({
+        idGame,
+        idPlayer: this.db.get(client)?.index,
+      }),
+    });
+  }
+
+  private createWinnersRes() {
+    return JSON.stringify({
+      type: Commands.UpdateWinners,
+      data: JSON.stringify(this.getAllWinners()),
+    });
+  }
+
+  private attackShipRes(
+    x: number | string,
+    y: number | string,
+    indexPlayer: number,
+    status: string,
+  ): string {
+    return JSON.stringify({
+      type: Commands.Attack,
+      data: JSON.stringify({
+        position: { x, y },
+        currentPlayer: indexPlayer,
+        status,
+      }),
+    });
+  }
+
+  private nextTurnRes(id: number): string {
+    return JSON.stringify({
+      type: Commands.Turn,
+      data: JSON.stringify({
+        currentPlayer: id,
+      }),
+    });
+  }
+
+  private finishGameRes(indexPlayer: number) {
+    return JSON.stringify({
+      type: Commands.Finish,
+      data: JSON.stringify({ winPlayer: indexPlayer }),
+    });
   }
 
   public createUser(data: string, ws: WebSocket, wss: WebSocketServer): void {
@@ -52,23 +99,7 @@ export class GameController extends RoomsDB implements IGame {
       }
     });
 
-    // Send current winners
-    const winners = JSON.stringify({
-      type: Commands.UpdateWinners,
-      data: JSON.stringify(this.getAllWinners()),
-    });
-
-    ws.send(winners);
-  }
-
-  public createGame(idGame: number, client: WebSocket): string {
-    return JSON.stringify({
-      type: Commands.CreateGame,
-      data: JSON.stringify({
-        idGame,
-        idPlayer: this.db.get(client)?.index,
-      }),
-    });
+    ws.send(this.createWinnersRes());
   }
 
   public addUserToRoom(data: string, ws: WebSocket, wss: WebSocketServer): void {
@@ -81,7 +112,7 @@ export class GameController extends RoomsDB implements IGame {
 
       players.usersWS.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(this.createGame(idGame, client));
+          client.send(this.createGameRes(idGame, client));
         }
       });
 
@@ -147,23 +178,7 @@ export class GameController extends RoomsDB implements IGame {
     }
   }
 
-  private attackShip(
-    x: number | string,
-    y: number | string,
-    indexPlayer: number,
-    status: string,
-  ): string {
-    return JSON.stringify({
-      type: Commands.Attack,
-      data: JSON.stringify({
-        position: { x, y },
-        currentPlayer: indexPlayer,
-        status,
-      }),
-    });
-  }
-
-  public shot(
+  private shot(
     target: string,
     shipsCoords: TShipsCoords,
     killed: TShipsCoords,
@@ -208,9 +223,9 @@ export class GameController extends RoomsDB implements IGame {
 
     if (turn === indexPlayer) {
       usersInGame.forEach((user) => {
-        user.send(this.attackShip(x, y, indexPlayer, status));
+        user.send(this.attackShipRes(x, y, indexPlayer, status));
 
-        // shot around the ship
+        // send shots around the killed ship
         if (status === AttackStatus.Killed) {
           const roundCoords = getCoordsAroundShip(killedShip);
 
@@ -218,54 +233,33 @@ export class GameController extends RoomsDB implements IGame {
             const [xx, yy] = ship.split('-');
 
             usersInGame.forEach((client) => {
-              client.send(this.attackShip(xx, yy, indexPlayer, AttackStatus.Miss));
+              client.send(this.attackShipRes(xx, yy, indexPlayer, AttackStatus.Miss));
             });
-          });
-        }
-
-        // send next turn
-        let nextTurn;
-        if (status === AttackStatus.Miss) {
-          nextTurn = JSON.stringify({
-            type: Commands.Turn,
-            data: JSON.stringify({
-              currentPlayer: secondPlayerId,
-            }),
-          });
-
-          game.turn = secondPlayerId;
-        } else {
-          nextTurn = JSON.stringify({
-            type: Commands.Turn,
-            data: JSON.stringify({
-              currentPlayer: indexPlayer,
-            }),
           });
         }
 
         // win case
         //TODO check rooms state
         if (shipsCoords.length === 0) {
-          const finishGame = JSON.stringify({
-            type: Commands.Finish,
-            data: JSON.stringify({ winPlayer: indexPlayer }),
-          });
-
-          user.send(finishGame);
+          user.send(this.finishGameRes(indexPlayer));
 
           this.updateWinner(this.getUser(ws)!.name);
 
-          const winners = JSON.stringify({
-            type: Commands.UpdateWinners,
-            data: JSON.stringify(this.getAllWinners()),
-          });
-
           wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-              client.send(winners);
+              client.send(this.createWinnersRes());
             }
           });
         } else {
+          // send next turn
+          let nextTurn;
+          if (status === AttackStatus.Miss) {
+            nextTurn = this.nextTurnRes(secondPlayerId);
+            game.turn = secondPlayerId;
+          } else {
+            nextTurn = this.nextTurnRes(indexPlayer);
+          }
+
           user.send(nextTurn);
         }
       });
