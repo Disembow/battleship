@@ -1,10 +1,5 @@
 import { WebSocket } from 'ws';
-
-type TUser = {
-  index: number;
-  name: string;
-  password: string;
-};
+import { TUser } from '../types/types.js';
 
 interface IUsers {
   setUser(key: WebSocket, value: TUser): void;

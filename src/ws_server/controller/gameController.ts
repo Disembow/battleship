@@ -1,5 +1,5 @@
 import { WebSocket, WebSocketServer } from 'ws';
-import { RoomsDB } from './db/rooms.js';
+import { RoomsDB } from '../db/rooms.js';
 import {
   AddUserToRoomReq,
   Attack,
@@ -10,12 +10,12 @@ import {
   StartingFieldReq,
   TShipInfo,
   TShipsCoords,
-} from './types/types.js';
-import { getCoordsAroundShip } from './utils/getCoordsAroundShip.js';
-import { FIELD_SIDE_SIZE, USERS_PER_GAME } from './data/constants.js';
-import { getEmptyArray } from './utils/getEmptyArray.js';
-import { validateAuth } from './utils/validateAuth.js';
-import { randomShotCoords } from './utils/randomShotCoords.js';
+} from '../types/types.js';
+import { getCoordsAroundShip } from '../utils/getCoordsAroundShip.js';
+import { FIELD_SIDE_SIZE, USERS_PER_GAME } from '../data/constants.js';
+import { getEmptyArray } from '../utils/getEmptyArray.js';
+import { validateAuth } from '../utils/validateAuth.js';
+import { randomShotCoords } from '../utils/randomShotCoords.js';
 
 interface IGame {
   createUser(data: string, ws: WebSocket, wss: WebSocketServer): void;
@@ -26,7 +26,7 @@ interface IGame {
   randomAttack(data: string, ws: WebSocket, wss: WebSocketServer): void;
 }
 
-class Game extends RoomsDB implements IGame {
+export class GameController extends RoomsDB implements IGame {
   constructor() {
     super();
   }
@@ -57,6 +57,14 @@ class Game extends RoomsDB implements IGame {
         client.send(this.updateRooms());
       }
     });
+
+    // Send current winners
+    const winners = JSON.stringify({
+      type: Commands.UpdateWinners,
+      data: JSON.stringify(this.getAllWinners()),
+    });
+
+    ws.send(winners);
   }
 
   public createGame(idGame: number, client: WebSocket): string {
@@ -310,5 +318,3 @@ class Game extends RoomsDB implements IGame {
     return status;
   }
 }
-
-export default new Game();

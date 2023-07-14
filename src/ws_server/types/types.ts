@@ -21,6 +21,12 @@ export interface IRegRequest {
   data: string;
 }
 
+export type TUser = {
+  index: number;
+  name: string;
+  password: string;
+};
+
 export interface IRegRequestData {
   name: string;
   password: string;
