@@ -12,5 +12,9 @@ export const ws_server = (port: number) => {
     ws.on('message', async (msg) => {
       Game.start(msg.toString(), ws, wss);
     });
+
+    ws.on('close', () => {
+      Game.deleteRoomOnDisconnect(ws, wss);
+    });
   });
 };

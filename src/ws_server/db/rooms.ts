@@ -98,6 +98,20 @@ export class RoomsDB extends UsersDB implements IRoomDB {
     this.rooms.delete(id);
   }
 
+  public deleteRoomOnDisconnect(ws: WebSocket, wss: WebSocketServer) {
+    for (let [key, value] of this.rooms.entries()) {
+      value.usersWS.forEach((userWS) => {
+        if (JSON.stringify(userWS) === JSON.stringify(ws)) {
+          this.deleteRoomById(key);
+        }
+      });
+    }
+
+    wss.clients.forEach((client) => {
+      client.send(this.updateRooms());
+    });
+  }
+
   public setGame(gameId: number, gameState: IGameState): void {
     this.games.set(gameId, gameState);
   }
