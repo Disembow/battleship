@@ -215,6 +215,31 @@ export class GameController extends RoomsDB implements IGame {
     const shipsCoords = game[secondPlayerId].shipsCoords;
     const killedCoords = game[secondPlayerId].killed;
 
+    // check is users connected
+    usersInGame.forEach((client, index) => {
+      if (client.readyState === WebSocket.CLOSED) {
+        const user0 = usersInGame[0];
+        const user1 = usersInGame[1];
+        if (index === 0) {
+          user1.send(this.nextTurnRes(ids[1]));
+          user1.send(this.finishGameRes(ids[1]));
+          this.updateWinner(this.getUser(user1)!.name);
+          user0.close();
+        } else {
+          user0.send(this.nextTurnRes(ids[0]));
+          user0.send(this.finishGameRes(ids[0]));
+          this.updateWinner(this.getUser(user0)!.name);
+          user1.close();
+        }
+
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(this.createWinnersRes());
+          }
+        });
+      }
+    });
+
     // send attack response
     const [status, killedShip] = this.shot(`${x}-${y}`, shipsCoords, killedCoords) as [
       AttackStatus,
