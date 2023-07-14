@@ -103,6 +103,7 @@ export class RoomsDB extends UsersDB implements IRoomDB {
       value.usersWS.forEach((userWS) => {
         if (JSON.stringify(userWS) === JSON.stringify(ws)) {
           this.deleteRoomById(key);
+          ws.close();
         }
       });
     }
