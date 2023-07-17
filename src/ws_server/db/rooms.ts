@@ -64,7 +64,9 @@ export class RoomsDB extends UsersDB implements IRoomDB {
       // Update rooms state
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(this.updateRooms());
+          const rooms = this.updateRooms();
+          client.send(rooms);
+          console.log(rooms);
         }
       });
     }
@@ -127,7 +129,9 @@ export class RoomsDB extends UsersDB implements IRoomDB {
     }
 
     wss.clients.forEach((client) => {
-      client.send(this.updateRooms());
+      const rooms = this.updateRooms();
+      client.send(rooms);
+      console.log(rooms);
     });
   }
 

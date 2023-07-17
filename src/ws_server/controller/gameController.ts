@@ -91,15 +91,20 @@ export class GameController extends RoomsDB implements IGame {
     });
 
     ws.send(response);
+    console.log(response);
 
     // Update rooms state
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
+        const rooms = this.updateRooms();
         client.send(this.updateRooms());
+        console.log(rooms);
       }
     });
 
-    ws.send(this.createWinnersRes());
+    const winners = this.createWinnersRes();
+    ws.send(winners);
+    console.log(winners);
   }
 
   public addUserToRoom(data: string, ws: WebSocket, wss: WebSocketServer): void {
@@ -114,7 +119,9 @@ export class GameController extends RoomsDB implements IGame {
 
       players.usersWS.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(this.createGameRes(idGame, client));
+          const newGame = this.createGameRes(idGame, client);
+          client.send(newGame);
+          console.log(newGame);
         }
       });
 
@@ -122,7 +129,9 @@ export class GameController extends RoomsDB implements IGame {
 
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(this.updateRooms());
+          const rooms = this.updateRooms();
+          client.send(rooms);
+          console.log(rooms);
         }
       });
     }
@@ -167,6 +176,7 @@ export class GameController extends RoomsDB implements IGame {
         });
 
         client.send(startState);
+        console.log(startState);
 
         currentGame.turn = currentGame.ids[firstPlayer];
 
@@ -176,6 +186,7 @@ export class GameController extends RoomsDB implements IGame {
         });
 
         client.send(turn);
+        console.log(turn);
       });
     }
   }
@@ -221,18 +232,25 @@ export class GameController extends RoomsDB implements IGame {
         if (index === 0) {
           user1.send(this.nextTurnRes(ids[1]));
           user1.send(this.finishGameRes(ids[1]));
+          console.log(this.nextTurnRes(ids[1]));
+          console.log(this.finishGameRes(ids[1]));
+
           this.updateWinner(this.getUser(user1)!.name);
           user0.close();
         } else {
           user0.send(this.nextTurnRes(ids[0]));
           user0.send(this.finishGameRes(ids[0]));
+          console.log(this.nextTurnRes(ids[0]));
+          console.log(this.finishGameRes(ids[0]));
           this.updateWinner(this.getUser(user0)!.name);
           user1.close();
         }
 
         wss.clients.forEach((client) => {
           if (client.readyState === WebSocket.OPEN) {
-            client.send(this.createWinnersRes());
+            const winners = this.createWinnersRes();
+            client.send(winners);
+            console.log(winners);
           }
         });
       }
@@ -246,7 +264,9 @@ export class GameController extends RoomsDB implements IGame {
 
     if (turn === indexPlayer) {
       usersInGame.forEach((user) => {
-        user.send(this.attackShipRes(x, y, indexPlayer, status));
+        const attack = this.attackShipRes(x, y, indexPlayer, status);
+        user.send(attack);
+        console.log(attack);
 
         // send shots around the killed ship
         if (status === AttackStatus.Killed) {
@@ -256,7 +276,9 @@ export class GameController extends RoomsDB implements IGame {
             const [xx, yy] = ship.split('-');
 
             usersInGame.forEach((client) => {
-              client.send(this.attackShipRes(xx, yy, indexPlayer, AttackStatus.Miss));
+              const attackShip = this.attackShipRes(xx, yy, indexPlayer, AttackStatus.Miss);
+              client.send(attackShip);
+              console.log(attackShip);
             });
           });
         }
@@ -264,13 +286,17 @@ export class GameController extends RoomsDB implements IGame {
         //TODO check rooms state
         if (JSON.stringify(shipsCoords) === JSON.stringify(killedCoords)) {
           // win case
-          user.send(this.finishGameRes(indexPlayer));
+          const winRes = this.finishGameRes(indexPlayer);
+          user.send(winRes);
+          console.log(winRes);
 
           this.updateWinner(this.getUser(ws)!.name);
 
           wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-              client.send(this.createWinnersRes());
+              const winners = this.createWinnersRes();
+              client.send(winners);
+              console.log(winners);
             }
           });
         } else {
@@ -284,6 +310,7 @@ export class GameController extends RoomsDB implements IGame {
           }
 
           user.send(nextTurn);
+          console.log(nextTurn);
         }
       });
     }
@@ -327,7 +354,9 @@ export class GameController extends RoomsDB implements IGame {
 
     const idGame = this.getGameId();
 
-    ws.send(this.createGameRes(idGame, ws));
+    const newGame = this.createGameRes(idGame, ws);
+    ws.send(newGame);
+    console.log(newGame);
 
     // this.addShips();
   }
