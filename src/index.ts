@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
-import { http_server } from './src/http_server/index.js';
-import { ws_server } from './src/ws_server/server.js';
+import { http_server } from './http_server/index.js';
+import { ws_server } from './ws_server/server.js';
 
 config();
 

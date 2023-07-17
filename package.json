@@ -5,8 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node ./index.js",
+    "start": "npm run build && node dist/src/index",
     "start:dev": "npx nodemon",
+    "build": "npx tsc",
     "lint": "npx eslint ./src",
     "lint:fix": "npx eslint ./src --fix"
   },
