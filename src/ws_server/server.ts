@@ -3,7 +3,7 @@ import Game from './model/gameModel.js';
 
 export const ws_server = (port: number) => {
   const wss = new WebSocketServer({ port }, () =>
-    console.log(`Websocket server has been started on port ${port}...`),
+    console.log(`Websocket server has been started on port ${port}, http://localhost:${port}/...`),
   );
 
   wss.on('connection', (ws) => {

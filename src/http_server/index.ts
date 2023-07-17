@@ -23,5 +23,5 @@ const httpServer = http.createServer(function (req, res) {
 
 export const http_server = (port: number) =>
   httpServer.listen(port, () => {
-    console.log(`Start static http server on the ${port} port!`);
+    console.log(`Start static http server on the ${port} port, http://localhost:${port}`);
   });
