@@ -261,9 +261,9 @@ export class GameController extends RoomsDB implements IGame {
           });
         }
 
-        // win case
         //TODO check rooms state
         if (JSON.stringify(shipsCoords) === JSON.stringify(killedCoords)) {
+          // win case
           user.send(this.finishGameRes(indexPlayer));
 
           this.updateWinner(this.getUser(ws)!.name);

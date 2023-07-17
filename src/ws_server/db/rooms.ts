@@ -51,18 +51,23 @@ export class RoomsDB extends UsersDB implements IRoomDB {
   }
 
   public createRoom(ws: WebSocket, wss: WebSocketServer): void {
-    const newRoomId = this.getRoomId();
-    const name = this.db.get(ws)?.name;
-    const index = this.db.get(ws)?.index;
+    const isRoomWasCreated = this.deleteRoomByWS(ws);
 
-    if (name && index) this.setRoom(newRoomId, ws, name, index);
+    if (!isRoomWasCreated) {
+      // create new room
+      const newRoomId = this.getRoomId();
+      const name = this.db.get(ws)?.name;
+      const index = this.db.get(ws)?.index;
 
-    // Update rooms state
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(this.updateRooms());
-      }
-    });
+      if (name && index) this.setRoom(newRoomId, ws, name, index);
+
+      // Update rooms state
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(this.updateRooms());
+        }
+      });
+    }
   }
 
   public getAllRooms(): TRoomResponse[] {
@@ -76,6 +81,20 @@ export class RoomsDB extends UsersDB implements IRoomDB {
     });
 
     return result;
+  }
+
+  private deleteRoomByWS(ws: WebSocket) {
+    let res = false;
+
+    for (let [key, value] of this.rooms.entries()) {
+      value.usersWS.forEach((userWS) => {
+        if (JSON.stringify(userWS) === JSON.stringify(ws)) {
+          // this.deleteRoomById(key);
+          res = true;
+        }
+      });
+    }
+    return res;
   }
 
   public getRoomById(roomId: number): IRoom | undefined {
