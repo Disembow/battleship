@@ -194,12 +194,8 @@ export class GameController extends RoomsDB implements IGame {
           result = [AttackStatus.Shot, ['']];
         }
 
-        if (JSON.stringify(ship) === JSON.stringify(killed[shipIndex])) {
+        if (JSON.stringify(ship) === JSON.stringify(killed[shipIndex]) && ship.includes(target)) {
           const killedShip = killed[shipIndex];
-
-          shipsCoords.splice(shipIndex, 1);
-          killed.splice(shipIndex, 1);
-
           result = [AttackStatus.Killed, killedShip];
         }
       });
@@ -267,7 +263,7 @@ export class GameController extends RoomsDB implements IGame {
 
         // win case
         //TODO check rooms state
-        if (shipsCoords.length === 0) {
+        if (JSON.stringify(shipsCoords) === JSON.stringify(killedCoords)) {
           user.send(this.finishGameRes(indexPlayer));
 
           this.updateWinner(this.getUser(ws)!.name);
