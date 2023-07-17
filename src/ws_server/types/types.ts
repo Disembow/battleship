@@ -66,7 +66,7 @@ export type TShipInfo = {
   };
   direction: boolean;
   length: number;
-  type: typeof ShipType;
+  type: ShipType;
 };
 
 export type TWinners = {
