@@ -51,7 +51,7 @@ export class RoomsDB extends UsersDB implements IRoomDB {
   }
 
   public createRoom(ws: WebSocket, wss: WebSocketServer): void {
-    const isRoomWasCreated = this.deleteRoomByWS(ws);
+    const isRoomWasCreated = this.isRoomAlreadyExist(ws);
 
     if (!isRoomWasCreated) {
       // create new room
@@ -83,13 +83,12 @@ export class RoomsDB extends UsersDB implements IRoomDB {
     return result;
   }
 
-  private deleteRoomByWS(ws: WebSocket) {
+  private isRoomAlreadyExist(ws: WebSocket) {
     let res = false;
 
-    for (let [key, value] of this.rooms.entries()) {
+    for (let [_, value] of this.rooms.entries()) {
       value.usersWS.forEach((userWS) => {
         if (JSON.stringify(userWS) === JSON.stringify(ws)) {
-          // this.deleteRoomById(key);
           res = true;
         }
       });
