@@ -105,7 +105,9 @@ export class GameController extends RoomsDB implements IGame {
   public addUserToRoom(data: string, ws: WebSocket, wss: WebSocketServer): void {
     const { indexRoom } = <AddUserToRoomReq>JSON.parse(data);
     const players = this.getRoomById(indexRoom);
-    players?.usersWS.push(ws);
+    const isUserTargetRoomCreator = JSON.stringify(players?.usersWS[0]) === JSON.stringify(ws);
+
+    if (!isUserTargetRoomCreator) players?.usersWS.push(ws);
 
     if (players?.usersWS.length === USERS_PER_GAME) {
       const idGame = this.getGameId();
