@@ -42,7 +42,7 @@ class Game extends GameController {
       }
 
       case Commands.SinglePlay: {
-        //TODO: implement
+        this.createSinglePlay(ws);
         break;
       }
     }

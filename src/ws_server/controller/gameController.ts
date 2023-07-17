@@ -324,8 +324,13 @@ export class GameController extends RoomsDB implements IGame {
     return status;
   }
 
-  // private checkIsUserConnected(usersWS: WebSocket[]) {
-  // const [firstUser, secondUser] = usersWS
-  // if (firstUser.)
-  // }
+  public createSinglePlay(ws: WebSocket) {
+    const { index, name } = this.getUser(ws)!;
+
+    const idGame = this.getGameId();
+
+    ws.send(this.createGameRes(idGame, ws));
+
+    // this.addShips();
+  }
 }
